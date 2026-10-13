@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Willam Hieu - Bảng Kèo Châu Á & Lịch Thi Đấu Trực Tuyến</title>
+    <meta
+      name="description"
+      content="Xem lịch thi đấu, kết quả và tỷ lệ Kèo Châu Á (Asian Handicap), Tài Xỉu (Over/Under) cập nhật trực tiếp cho Ngoại Hạng Anh, La Liga, Cúp C1."
+    />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Tailwind CSS 4 Browser CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <style>
+      /* Tăng cỡ chữ cơ sở lên thêm 2px (từ 16px lên 18px) theo yêu cầu */
+      html {
+        font-size: 18px;
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        font-family:
+          "Be Vietnam Pro",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+      }
+      .font-title {
+        font-family: "Outfit", sans-serif;
+      }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-900"
+  >
+    <!-- Top Header -->
+    <header
+      class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs"
+    >
+      <div
+        class="max-w-5xl mx-auto px-3.5 sm:px-4 py-3 flex items-center justify-between gap-3"
+      >
+        <!-- Logo & Branding -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-sm shadow-emerald-200 ring-2 ring-emerald-500/20 shrink-0"
+          >
+            <span class="text-xl">⚽</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5 sm:gap-2">
+              <h1
+                class="text-lg sm:text-xl font-bold font-title tracking-tight text-slate-900"
+              >
+                William Hieu
+              </h1>
+              <span
+                class="px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-emerald-100 text-emerald-800 border border-emerald-200"
+              >
+                Kèo Châu Á
+              </span>
+            </div>
+            <p
+              class="text-xs text-slate-500 truncate max-w-[210px] sm:max-w-none"
+            >
+              Ngoại Hạng Anh • La Liga • Cúp C1 (UCL)
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="flex items-center gap-2">
+          <!-- API Quota Badge -->
+          <div
+            id="quota-badge"
+            class="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-600 border border-slate-200"
+          >
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="quota-text">API: 0/100 req</span>
+          </div>
+
+          <!-- Refresh Button -->
+          <button
+            id="btn-refresh"
+            onclick="handleRefresh(false)"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold shadow-xs transition active:scale-95"
+          >
+            <svg
+              id="icon-refresh"
+              class="w-3.5 h-3.5 text-slate-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            <span class="hidden sm:inline">Làm mới</span>
+          </button>
+
+          <!-- Force Reload Button -->
+          <button
+            onclick="handleRefresh(true)"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs shadow-emerald-600/30 transition active:scale-95"
+            title="Xóa cache và gọi dữ liệu mới từ API"
+          >
+            <span>Bỏ cache</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main
+      class="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 w-full flex-1 space-y-4 sm:space-y-5"
+    >
+      <!-- Status Notice Banner -->
+      <div
+        id="alert-banner"
+        class="hidden p-3 rounded-xl border text-xs sm:text-sm flex items-center justify-between gap-2.5"
+      >
+        <div class="flex items-center gap-2">
+          <span id="alert-icon" class="text-base">ℹ️</span>
+          <span id="alert-message" class="font-medium"></span>
+        </div>
+        <button
+          onclick="
+            document.getElementById('alert-banner').classList.add('hidden')
+          "
+          class="text-slate-400 hover:text-slate-700 font-bold px-2 py-0.5"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Controls & Filter Section (Tối ưu Mobile) -->
+      <div
+        class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3.5 sm:p-4 space-y-3"
+      >
+        <!-- Date Tabs & Search Input -->
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+        >
+          <!-- Date Tabs -->
+          <div
+            class="grid grid-cols-3 bg-slate-100 p-1 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200/80 w-full sm:w-auto"
+          >
+            <button
+              id="tab-yesterday"
+              onclick="switchTab('yesterday')"
+              class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-center transition text-slate-600 hover:text-slate-900"
+            >
+              Hôm qua
+            </button>
+            <button
+              id="tab-today"
+              onclick="switchTab('today')"
+              class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-center transition bg-white text-emerald-800 font-bold shadow-xs border border-slate-200/70"
+            >
+              Hôm nay
+            </button>
+            <button
+              id="tab-tomorrow"
+              onclick="switchTab('tomorrow')"
+              class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-center transition text-slate-600 hover:text-slate-900"
+            >
+              Ngày mai
+            </button>
+          </div>
+
+          <!-- Search Input -->
+          <div class="relative w-full sm:w-64">
+            <input
+              type="text"
+              id="search-input"
+              oninput="handleSearch(this.value)"
+              placeholder="Tìm CLB (Barca, Arsenal...)"
+              class="w-full pl-9 pr-3.5 py-1.5 text-xs sm:text-sm bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-emerald-500 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
+            />
+            <svg
+              class="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <!-- League Filter Pills (Cuộn ngang êm ái trên mobile) -->
+        <div
+          class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100 no-scrollbar"
+        >
+          <span
+            class="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1"
+          >
+            Giải:
+          </span>
+
+          <button
+            onclick="setLeagueFilter('all')"
+            id="filter-all"
+            class="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-emerald-600 text-white shadow-xs shrink-0 transition"
+          >
+            Tất cả <span id="count-all" class="ml-0.5 opacity-80">(0)</span>
+          </button>
+          <button
+            onclick="setLeagueFilter(2)"
+            id="filter-2"
+            class="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 shrink-0 transition"
+          >
+            Cúp C1 <span id="count-2" class="ml-0.5 opacity-70">(0)</span>
+          </button>
+          <button
+            onclick="setLeagueFilter(39)"
+            id="filter-39"
+            class="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 shrink-0 transition"
+          >
+            Ngoại Hạng Anh
+            <span id="count-39" class="ml-0.5 opacity-70">(0)</span>
+          </button>
+          <button
+            onclick="setLeagueFilter(140)"
+            id="filter-140"
+            class="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 shrink-0 transition"
+          >
+            La Liga <span id="count-140" class="ml-0.5 opacity-70">(0)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div
+        id="loading"
+        class="text-center py-12 space-y-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs hidden"
+      >
+        <div
+          class="inline-block animate-spin rounded-full h-8 w-8 border-3 border-emerald-600 border-t-transparent"
+        ></div>
+        <div class="text-sm font-bold text-slate-800">
+          Đang đồng bộ lịch & Kèo Châu Á...
+        </div>
+        <p class="text-xs text-slate-400">
+          Đang quét tỷ lệ kèo từ Bet365, Pinnacle...
+        </p>
+      </div>
+
+      <!-- Matches Content List (Cards được tối ưu hoá cho mobile) -->
+      <div id="matches-container" class="space-y-3.5 sm:space-y-4"></div>
+
+      <!-- Empty State -->
+      <div
+        id="empty-state"
+        class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-2.5"
+      >
+        <div class="text-3xl">📭</div>
+        <h3 class="text-sm sm:text-base font-bold text-slate-800">
+          Không tìm thấy trận đấu nào
+        </h3>
+        <p
+          id="empty-subtext"
+          class="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto"
+        >
+          Không có trận nào thuộc tiêu chí giải đấu đã chọn hoặc chưa có lịch
+          diễn ra hôm nay.
+        </p>
+      </div>
+    </main>
+
+    <!-- Modal Xem Chi Tiết Toàn Bộ Mốc Kèo Chấp (Handicap Lines) -->
+    <div
+      id="handicap-modal"
+      class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3.5 hidden"
+    >
+      <div
+        class="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-xl border border-slate-200 overflow-hidden"
+      >
+        <!-- Modal Header -->
+        <div
+          class="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between"
+        >
+          <div>
+            <h3
+              id="modal-match-title"
+              class="text-sm sm:text-base font-bold text-slate-900"
+            >
+              Chi tiết các mốc Kèo Châu Á
+            </h3>
+            <p id="modal-match-sub" class="text-xs text-slate-500 mt-0.5">
+              Nguồn nhà cái Bet365 / Pinnacle
+            </p>
+          </div>
+          <button
+            onclick="closeHandicapModal()"
+            class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Body (Table) -->
+        <div
+          class="p-3.5 overflow-y-auto space-y-2 flex-1"
+          id="modal-lines-container"
+        ></div>
+
+        <!-- Modal Footer -->
+        <div
+          class="px-4 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-xs text-slate-500"
+        >
+          <span>* Tỷ lệ cược biến động theo thời gian thực</span>
+          <button
+            onclick="closeHandicapModal()"
+            class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold text-slate-700 transition"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer
+      class="bg-white border-t border-slate-200 py-5 mt-10 text-center text-xs text-slate-500 space-y-1"
+    >
+      <div class="font-bold text-slate-700">
+        Willam Hieu • Bảng Kèo Châu Á & Tài Xỉu Trực Tuyến
+      </div>
+      <div>Tối ưu hiển thị cho Mobile • Dữ liệu từ API-Football</div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+      // 1. Cấu hình API-Football (api-sports.io)
+      const API_KEY = "5a6241d402561dd5c0dc27356c2a039c";
+      const BASE_URL = "https://v3.football.api-sports.io";
+
+      // 2. ID các giải đấu trọng tâm:
+      // 2: UEFA Champions League, 39: Premier League, 140: La Liga
+      const TARGET_LEAGUES = [2, 39, 140];
+
+      // State ứng dụng
+      let currentTab = "today"; // 'yesterday' | 'today' | 'tomorrow'
+      let currentLeagueFilter = "all"; // 'all' | 2 | 39 | 140
+      let searchQuery = "";
+      let matchesCache = {
+        today: [],
+        yesterday: [],
+        tomorrow: [],
+      };
+
+      const getFormattedDate = (offsetDays = 0) => {
+        const d = new Date();
+        d.setDate(d.getDate() + offsetDays);
+        return d.toISOString().split("T")[0];
+      };
+
+      async function apiGet(endpoint) {
+        try {
+          const res = await fetch(`${BASE_URL}/${endpoint}`, {
+            headers: { "x-apisports-key": API_KEY },
+          });
+          const data = await res.json();
+          if (data.errors && Object.keys(data.errors).length > 0) {
+            console.warn("API Error:", data.errors);
+            if (data.errors.requests) {
+              showAlert("warning", `API Warning: ${data.errors.requests}`);
+            }
+          }
+          return data.response || [];
+        } catch (err) {
+          console.error(`Lỗi khi gọi API: ${endpoint}`, err);
+          return [];
+        }
+      }
+
+      async function checkApiStatus() {
+        try {
+          const res = await apiGet("status");
+          if (res && res.account) {
+            const currentReq = res.requests?.current ?? 0;
+            const limit = res.requests?.limit_day ?? 100;
+            const quotaText = document.getElementById("quota-text");
+            if (quotaText) {
+              quotaText.textContent = `API: ${currentReq}/${limit} req`;
+            }
+          }
+        } catch (e) {
+          console.error("Lỗi khi kiểm tra quota:", e);
+        }
+      }
+
+      function showAlert(type, message) {
+        const banner = document.getElementById("alert-banner");
+        const msgEl = document.getElementById("alert-message");
+        const iconEl = document.getElementById("alert-icon");
+        if (!banner || !msgEl) return;
+
+        banner.className =
+          "p-3 rounded-xl border text-xs sm:text-sm flex items-center justify-between gap-2.5 " +
+          (type === "warning"
+            ? "bg-amber-50 text-amber-800 border-amber-200"
+            : type === "error"
+              ? "bg-rose-50 text-rose-800 border-rose-200"
+              : "bg-emerald-50 text-emerald-800 border-emerald-200");
+
+        iconEl.textContent =
+          type === "warning" ? "⚠️" : type === "error" ? "❌" : "✅";
+        msgEl.textContent = message;
+        banner.classList.remove("hidden");
+      }
+
+      // Kiểm tra xem trận đấu có Barcelona hay không
+      function isBarcelonaMatch(item) {
+        if (!item || !item.teams) return false;
+        const home = (item.teams.home?.name || "").toLowerCase();
+        const away = (item.teams.away?.name || "").toLowerCase();
+        return (
+          home.includes("barcelona") ||
+          home.includes("barca") ||
+          away.includes("barcelona") ||
+          away.includes("barca")
+        );
+      }
+
+      // ==============================================================
+      // XỬ LÝ KÈO CHÂU Á & TÀI XỈU (ĐÃ BỎ KÈO CHÂU ÂU)
+      // ==============================================================
+
+      function formatHandicapPair(homeItem, awayItem, homeTeam, awayTeam) {
+        const hMatch = homeItem.value.match(/([+-]?\d+(\.\d+)?)/);
+        const hVal = hMatch ? parseFloat(hMatch[1]) : 0;
+
+        let displayBadge = "";
+        let homeLabel = "";
+        let awayLabel = "";
+
+        if (hVal === 0) {
+          displayBadge = "Đồng banh (0)";
+          homeLabel = `${homeTeam} (0)`;
+          awayLabel = `${awayTeam} (0)`;
+        } else if (hVal < 0) {
+          const abs = Math.abs(hVal);
+          displayBadge = `Chấp ${abs}`;
+          homeLabel = `${homeTeam} (-${abs})`;
+          awayLabel = `${awayTeam} (+${abs})`;
+        } else {
+          displayBadge = `${awayTeam} chấp ${hVal}`;
+          homeLabel = `${homeTeam} (+${hVal})`;
+          awayLabel = `${awayTeam} (-${hVal})`;
+        }
+
+        const homeOddNum = parseFloat(homeItem.odd);
+        const awayOddNum = parseFloat(awayItem.odd);
+
+        const balanceScore =
+          Math.abs(homeOddNum - 1.95) + Math.abs(awayOddNum - 1.95);
+
+        return {
+          hVal,
+          displayBadge,
+          homeLabel,
+          awayLabel,
+          homeOdd: homeItem.odd,
+          awayOdd: awayItem.odd,
+          score: balanceScore,
+        };
+      }
+
+      function formatOverUnderPair(overItem, underItem) {
+        const m = overItem.value.match(/(\d+(\.\d+)?)/);
+        const total = m ? m[1] : "2.5";
+        const overOddNum = parseFloat(overItem.odd);
+        const underOddNum = parseFloat(underItem.odd);
+
+        return {
+          total,
+          displayBadge: `Tài Xỉu ${total}`,
+          overOdd: overItem.odd,
+          underOdd: underItem.odd,
+          score: Math.abs(overOddNum - 1.95) + Math.abs(underOddNum - 1.95),
+        };
+      }
+
+      function extractOdds(matchOdds, homeTeamName, awayTeamName) {
+        if (
+          !matchOdds ||
+          !matchOdds.bookmakers ||
+          matchOdds.bookmakers.length === 0
+        ) {
+          return null;
+        }
+
+        const priority = [
+          "Bet365",
+          "Pinnacle",
+          "SBO",
+          "1xBet",
+          "Betano",
+          "Betfair",
+          "Marathonbet",
+          "William Hill",
+        ];
+        const sortedBookies = [...matchOdds.bookmakers].sort((a, b) => {
+          const idxA = priority.indexOf(a.name);
+          const idxB = priority.indexOf(b.name);
+          return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
+        });
+
+        let selectedBmName = sortedBookies[0]?.name || "Nhà cái";
+        let ahBet = null;
+        let ouBet = null;
+
+        for (const bm of sortedBookies) {
+          const bets = bm.bets || [];
+          if (!ahBet) {
+            const found = bets.find(
+              (b) =>
+                b.id === 4 ||
+                (b.name && b.name.toLowerCase().includes("asian handicap")),
+            );
+            if (found && found.values && found.values.length > 0) {
+              ahBet = found;
+              selectedBmName = bm.name;
+            }
+          }
+          if (!ouBet) {
+            const found = bets.find(
+              (b) =>
+                b.id === 5 ||
+                (b.name &&
+                  (b.name.toLowerCase().includes("goals over/under") ||
+                    b.name.toLowerCase().includes("over/under"))),
+            );
+            if (found && found.values && found.values.length > 0) {
+              ouBet = found;
+            }
+          }
+          if (ahBet && ouBet) break;
+        }
+
+        // 1. Phân tích Kèo Châu Á
+        let ahPairs = [];
+        let mainAh = null;
+        if (ahBet && ahBet.values && ahBet.values.length > 0) {
+          const vals = ahBet.values;
+          for (let i = 0; i < vals.length; i++) {
+            const v = vals[i];
+            if (v.value.toLowerCase().startsWith("home")) {
+              const hMatch = v.value.match(/([+-]?\d+(\.\d+)?)/);
+              const hNum = hMatch ? hMatch[1] : "";
+              const matchingAway = vals.find(
+                (a) =>
+                  a.value.toLowerCase().startsWith("away") &&
+                  (hNum ? a.value.includes(hNum) : true),
+              );
+              if (matchingAway) {
+                const pair = formatHandicapPair(
+                  v,
+                  matchingAway,
+                  homeTeamName,
+                  awayTeamName,
+                );
+                if (
+                  !ahPairs.some((p) => Math.abs(p.hVal - pair.hVal) < 0.001)
+                ) {
+                  ahPairs.push(pair);
+                }
+              }
+            }
+          }
+
+          if (ahPairs.length > 0) {
+            ahPairs.sort((a, b) => a.score - b.score);
+            mainAh = { ...ahPairs[0] };
+            mainAh.allLines = [...ahPairs].sort((a, b) => a.hVal - b.hVal);
+          }
+        }
+
+        // 2. Phân tích Kèo Tài Xỉu
+        let ouPairs = [];
+        let mainOu = null;
+        if (ouBet && ouBet.values && ouBet.values.length > 0) {
+          const vals = ouBet.values;
+          const overs = vals.filter((v) =>
+            v.value.toLowerCase().includes("over"),
+          );
+          const unders = vals.filter((v) =>
+            v.value.toLowerCase().includes("under"),
+          );
+
+          overs.forEach((o) => {
+            const m = o.value.match(/(\d+(\.\d+)?)/);
+            const total = m ? m[1] : "";
+            const matchingUnder = unders.find(
+              (u) => total && u.value.includes(total),
+            );
+            if (matchingUnder) {
+              ouPairs.push(formatOverUnderPair(o, matchingUnder));
+            }
+          });
+
+          if (ouPairs.length > 0) {
+            ouPairs.sort((a, b) => a.score - b.score);
+            mainOu = { ...ouPairs[0] };
+            mainOu.allLines = [...ouPairs].sort(
+              (a, b) => parseFloat(a.total) - parseFloat(b.total),
+            );
+          }
+        }
+
+        return {
+          bookmakerName: selectedBmName,
+          asianHandicap: mainAh,
+          overUnder: mainOu,
+        };
+      }
+
+      // ==============================================================
+      // TẢI DỮ LIỆU & LƯU CACHE
+      // ==============================================================
+
+      async function fetchData(forceReload = false) {
+        const loadingEl = document.getElementById("loading");
+        const matchesContainer = document.getElementById("matches-container");
+        const emptyState = document.getElementById("empty-state");
+
+        loadingEl.classList.remove("hidden");
+        matchesContainer.innerHTML = "";
+        emptyState.classList.add("hidden");
+
+        const cacheKey = "wh_soccer_data_v5";
+        const cacheTimeKey = "wh_soccer_time_v5";
+        const cached = localStorage.getItem(cacheKey);
+        const cachedTime = localStorage.getItem(cacheTimeKey);
+
+        if (
+          !forceReload &&
+          cached &&
+          cachedTime &&
+          Date.now() - parseInt(cachedTime) < 60 * 60 * 1000
+        ) {
+          try {
+            matchesCache = JSON.parse(cached);
+            loadingEl.classList.add("hidden");
+            renderCurrentView();
+            updateLeagueCounts();
+            checkApiStatus();
+            return;
+          } catch (e) {
+            console.error("Lỗi đọc cache:", e);
+          }
+        }
+
+        try {
+          const todayStr = getFormattedDate(0);
+          const yesterdayStr = getFormattedDate(-1);
+          const tomorrowStr = getFormattedDate(1);
+
+          const [todayRaw, yesterdayRaw, tomorrowRaw] = await Promise.all([
+            apiGet(`fixtures?date=${todayStr}`),
+            apiGet(`fixtures?date=${yesterdayStr}`),
+            apiGet(`fixtures?date=${tomorrowStr}`),
+          ]);
+
+          const filterLeagues = (list) =>
+            list.filter((m) => TARGET_LEAGUES.includes(m.league.id));
+
+          const filteredToday = filterLeagues(todayRaw);
+          const filteredYesterday = filterLeagues(yesterdayRaw);
+          const filteredTomorrow = filterLeagues(tomorrowRaw);
+
+          const todayWithOdds = await Promise.all(
+            filteredToday.map(async (match) => {
+              const fixId = match.fixture.id;
+              const fixOddsKey = `wh_odds_${fixId}`;
+              let rawOdds = null;
+
+              if (!forceReload) {
+                const cachedFixOdds = localStorage.getItem(fixOddsKey);
+                if (cachedFixOdds) {
+                  try {
+                    rawOdds = JSON.parse(cachedFixOdds);
+                  } catch (e) {}
+                }
+              }
+
+              if (!rawOdds) {
+                const fetchedOddsList = await apiGet(`odds?fixture=${fixId}`);
+                if (fetchedOddsList && fetchedOddsList.length > 0) {
+                  rawOdds = fetchedOddsList[0];
+                  localStorage.setItem(fixOddsKey, JSON.stringify(rawOdds));
+                }
+              }
+
+              return {
+                ...match,
+                oddsParsed: extractOdds(
+                  rawOdds,
+                  match.teams.home.name,
+                  match.teams.away.name,
+                ),
+              };
+            }),
+          );
+
+          const tomorrowWithOdds = await Promise.all(
+            filteredTomorrow.map(async (match) => {
+              const fixId = match.fixture.id;
+              const fixOddsKey = `wh_odds_${fixId}`;
+              let rawOdds = null;
+
+              if (!forceReload) {
+                const cachedFixOdds = localStorage.getItem(fixOddsKey);
+                if (cachedFixOdds) {
+                  try {
+                    rawOdds = JSON.parse(cachedFixOdds);
+                  } catch (e) {}
+                }
+              }
+
+              if (!rawOdds) {
+                const fetchedOddsList = await apiGet(`odds?fixture=${fixId}`);
+                if (fetchedOddsList && fetchedOddsList.length > 0) {
+                  rawOdds = fetchedOddsList[0];
+                  localStorage.setItem(fixOddsKey, JSON.stringify(rawOdds));
+                }
+              }
+
+              return {
+                ...match,
+                oddsParsed: extractOdds(
+                  rawOdds,
+                  match.teams.home.name,
+                  match.teams.away.name,
+                ),
+              };
+            }),
+          );
+
+          matchesCache = {
+            today: todayWithOdds,
+            yesterday: filteredYesterday,
+            tomorrow: tomorrowWithOdds,
+          };
+
+          localStorage.setItem(cacheKey, JSON.stringify(matchesCache));
+          localStorage.setItem(cacheTimeKey, Date.now().toString());
+
+          showAlert(
+            "success",
+            `Đã tải ${todayWithOdds.length} trận hôm nay. Kèo Châu Á & Tài Xỉu đã sẵn sàng!`,
+          );
+        } catch (error) {
+          console.error("Lỗi tổng thể fetchData:", error);
+          showAlert(
+            "error",
+            "Có lỗi khi đồng bộ dữ liệu API. Đang sử dụng dữ liệu lưu trữ.",
+          );
+        } finally {
+          loadingEl.classList.add("hidden");
+          renderCurrentView();
+          updateLeagueCounts();
+          checkApiStatus();
+        }
+      }
+
+      function handleRefresh(force) {
+        const icon = document.getElementById("icon-refresh");
+        if (icon) icon.classList.add("animate-spin");
+        fetchData(force).then(() => {
+          if (icon) icon.classList.remove("animate-spin");
+        });
+      }
+
+      // ==============================================================
+      // GIAO DIỆN & TỔNG QUAN TỐI ƯU MOBILE (2 CỘT: HDP & O/U)
+      // ==============================================================
+
+      function switchTab(tab) {
+        currentTab = tab;
+        ["today", "yesterday", "tomorrow"].forEach((t) => {
+          const btn = document.getElementById(`tab-${t}`);
+          if (t === tab) {
+            btn.className =
+              "px-2.5 sm:px-3.5 py-1.5 rounded-lg text-center transition bg-white text-emerald-800 font-bold shadow-xs border border-slate-200/70";
+          } else {
+            btn.className =
+              "px-2.5 sm:px-3.5 py-1.5 rounded-lg text-center transition text-slate-600 hover:text-slate-900";
+          }
+        });
+        renderCurrentView();
+      }
+
+      function setLeagueFilter(leagueId) {
+        currentLeagueFilter = leagueId;
+        ["all", 2, 39, 140].forEach((id) => {
+          const btn = document.getElementById(`filter-${id}`);
+          if (!btn) return;
+          if (id === leagueId) {
+            btn.className =
+              "px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-emerald-600 text-white shadow-xs shrink-0 transition";
+          } else {
+            btn.className =
+              "px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 shrink-0 transition";
+          }
+        });
+        renderCurrentView();
+      }
+
+      function handleSearch(val) {
+        searchQuery = val.trim().toLowerCase();
+        renderCurrentView();
+      }
+
+      function updateLeagueCounts() {
+        const currentList = matchesCache[currentTab] || [];
+        const countAll = currentList.length;
+        const count2 = currentList.filter((m) => m.league.id === 2).length;
+        const count39 = currentList.filter((m) => m.league.id === 39).length;
+        const count140 = currentList.filter((m) => m.league.id === 140).length;
+
+        document.getElementById("count-all").textContent = `(${countAll})`;
+        document.getElementById("count-2").textContent = `(${count2})`;
+        document.getElementById("count-39").textContent = `(${count39})`;
+        document.getElementById("count-140").textContent = `(${count140})`;
+      }
+
+      // Render 2 CỘT TỔNG QUAN: Kèo Châu Á & Tài Xỉu (Không còn Kèo Châu Âu)
+      function renderOddsBlock(oddsParsed, matchIndex) {
+        if (!oddsParsed) {
+          return `
+            <div class="mt-3 p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl text-center text-xs text-slate-400 italic">
+              Nhà cái chưa mở kèo cho trận này
+            </div>
+          `;
+        }
+
+        const ah = oddsParsed.asianHandicap;
+        const ou = oddsParsed.overUnder;
+
+        return `
+          <div class="mt-3 pt-3 border-t border-slate-100 space-y-2">
+            <!-- Grid 2 cột tối ưu cho mobile: Kèo Châu Á & Tài Xỉu song song -->
+            <div class="grid grid-cols-2 gap-2 sm:gap-3">
+              <!-- CỘT 1: KÈO CHÂU Á (HDP) -->
+              <div class="bg-emerald-50/70 border border-emerald-200/90 rounded-xl p-2.5 sm:p-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[11px] sm:text-xs font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Kèo Chấp
+                    </span>
+                    ${
+                      ah
+                        ? `<span class="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-200/70 text-emerald-900 border border-emerald-300">${ah.displayBadge}</span>`
+                        : ""
+                    }
+                  </div>
+
+                  ${
+                    ah
+                      ? `
+                    <div class="space-y-1.5">
+                      <!-- Chủ nhà -->
+                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-emerald-100 px-2 py-1.5 rounded-lg shadow-2xs">
+                        <span class="text-slate-700 font-semibold truncate pr-1">${ah.homeLabel}</span>
+                        <span class="font-mono font-bold text-emerald-700 shrink-0 text-sm sm:text-base">${ah.homeOdd}</span>
+                      </div>
+                      <!-- Đội khách -->
+                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-emerald-100 px-2 py-1.5 rounded-lg shadow-2xs">
+                        <span class="text-slate-700 font-semibold truncate pr-1">${ah.awayLabel}</span>
+                        <span class="font-mono font-bold text-emerald-700 shrink-0 text-sm sm:text-base">${ah.awayOdd}</span>
+                      </div>
+                    </div>
+                  `
+                      : `
+                    <div class="text-xs text-slate-400 italic py-3 text-center">Chưa có kèo chấp</div>
+                  `
+                  }
+                </div>
+
+                ${
+                  ah && ah.allLines && ah.allLines.length > 1
+                    ? `
+                  <button
+                    onclick="openHandicapModal(${matchIndex})"
+                    class="mt-2 w-full text-center py-1 text-[11px] sm:text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100/70 rounded-md transition"
+                  >
+                    + Xem ${ah.allLines.length} mốc chấp
+                  </button>
+                `
+                    : ""
+                }
+              </div>
+
+              <!-- CỘT 2: KÈO TÀI XỈU (O/U) -->
+              <div class="bg-amber-50/70 border border-amber-200/90 rounded-xl p-2.5 sm:p-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[11px] sm:text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Tài Xỉu
+                    </span>
+                    ${
+                      ou
+                        ? `<span class="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900 border border-amber-300">${ou.displayBadge}</span>`
+                        : ""
+                    }
+                  </div>
+
+                  ${
+                    ou
+                      ? `
+                    <div class="space-y-1.5">
+                      <!-- Tài -->
+                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-amber-100 px-2 py-1.5 rounded-lg shadow-2xs">
+                        <span class="text-slate-700 font-semibold truncate pr-1">Tài (${ou.total})</span>
+                        <span class="font-mono font-bold text-amber-700 shrink-0 text-sm sm:text-base">${ou.overOdd}</span>
+                      </div>
+                      <!-- Xỉu -->
+                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-amber-100 px-2 py-1.5 rounded-lg shadow-2xs">
+                        <span class="text-slate-700 font-semibold truncate pr-1">Xỉu (${ou.total})</span>
+                        <span class="font-mono font-bold text-amber-700 shrink-0 text-sm sm:text-base">${ou.underOdd}</span>
+                      </div>
+                    </div>
+                  `
+                      : `
+                    <div class="text-xs text-slate-400 italic py-3 text-center">Chưa có Tài Xỉu</div>
+                  `
+                  }
+                </div>
+
+                <div class="mt-2 text-center py-1 text-[11px] text-amber-800 font-semibold opacity-75">
+                  Tỷ lệ tổng bàn thắng
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer nhỏ hiển thị nguồn nhà cái -->
+            <div class="flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-0.5 px-0.5">
+              <span>Nhà cái: <strong class="text-slate-600">${oddsParsed.bookmakerName}</strong></span>
+              <span class="flex items-center gap-1 text-emerald-700 font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Kèo Châu Á Live
+              </span>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderCurrentView() {
+        const matchesContainer = document.getElementById("matches-container");
+        const emptyState = document.getElementById("empty-state");
+        const emptySubtext = document.getElementById("empty-subtext");
+
+        let list = [...(matchesCache[currentTab] || [])];
+
+        // Lọc theo giải đấu
+        if (currentLeagueFilter !== "all") {
+          list = list.filter((m) => m.league.id === currentLeagueFilter);
+        }
+
+        // Lọc theo tìm kiếm CLB
+        if (searchQuery) {
+          list = list.filter(
+            (m) =>
+              m.teams.home.name.toLowerCase().includes(searchQuery) ||
+              m.teams.away.name.toLowerCase().includes(searchQuery) ||
+              m.league.name.toLowerCase().includes(searchQuery),
+          );
+        }
+
+        if (list.length === 0) {
+          matchesContainer.innerHTML = "";
+          emptyState.classList.remove("hidden");
+          emptySubtext.textContent =
+            currentTab === "yesterday"
+              ? "Hôm qua không có trận nào diễn ra trong các giải đấu đã chọn."
+              : currentTab === "today"
+                ? "Hôm nay không có trận nào hoặc chưa có lịch thi đấu phù hợp bộ lọc."
+                : "Ngày mai chưa có trận đấu nào được lên lịch cho giải này.";
+          return;
+        }
+
+        emptyState.classList.add("hidden");
+
+        // ĐƯA TRẬN BARCELONA LÊN TRÊN CÙNG
+        list.sort((a, b) => {
+          const aBarca = isBarcelonaMatch(a) ? 1 : 0;
+          const bBarca = isBarcelonaMatch(b) ? 1 : 0;
+          return bBarca - aBarca; // Barcelona luôn đứng đầu tiên (index 0)
+        });
+
+        // Render danh sách trận
+        matchesContainer.innerHTML = list
+          .map((item, index) => {
+            const hasBarca = isBarcelonaMatch(item);
+            const dateObj = new Date(item.fixture.date);
+            const timeStr = dateObj.toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const dateStr = dateObj.toLocaleDateString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+            });
+
+            const statusShort = item.fixture.status?.short || "NS";
+            const isFinished = ["FT", "AET", "PEN"].includes(statusShort);
+            const isLive = ["1H", "HT", "2H", "ET", "P", "LIVE"].includes(
+              statusShort,
+            );
+
+            let statusBadge = `
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                ${timeStr} (${dateStr})
+              </span>
+            `;
+            if (isLive) {
+              statusBadge = `
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
+                  TRỰC TIẾP ${item.fixture.status.elapsed ? `(${item.fixture.status.elapsed}')` : ""}
+                </span>
+              `;
+            } else if (isFinished) {
+              statusBadge = `
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                  HẾT GIỜ (${statusShort})
+                </span>
+              `;
+            }
+
+            // Giao diện VIP nổi bật nếu là trận của Barcelona
+            const cardWrapperClass = hasBarca
+              ? "bg-gradient-to-b from-amber-50/50 via-white to-white rounded-2xl border-2 border-amber-400 shadow-md ring-3 ring-amber-400/20 p-3.5 sm:p-5 relative overflow-hidden transition-all"
+              : "bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all p-3.5 sm:p-5";
+
+            const barcaHeaderBanner = hasBarca
+              ? `
+                <!-- VIP Banner: Mời anh Dú tham khảo -->
+                <div class="-mx-3.5 -mt-3.5 sm:-mx-5 sm:-mt-5 mb-3 px-3.5 py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-bold text-xs sm:text-sm rounded-t-2xl flex items-center justify-between shadow-xs border-b border-amber-300/80">
+                  <div class="flex items-center gap-2">
+                    <span class="text-base sm:text-lg">👑</span>
+                    <span class="font-extrabold uppercase tracking-wide">Mời anh Dú tham khảo</span>
+                    <span class="hidden sm:inline-block px-2 py-0.5 rounded-full bg-slate-900/15 text-slate-900 text-xs font-bold">Trận cầu tâm điểm</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-xs font-extrabold bg-white/40 px-2 py-0.5 rounded-lg border border-white/50">
+                    <span>🔴🔵 FC Barcelona</span>
+                  </div>
+                </div>
+              `
+              : "";
+
+            return `
+              <div class="${cardWrapperClass}">
+                ${barcaHeaderBanner}
+
+                <!-- Header: Giải đấu & Giờ thi đấu -->
+                <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
+                  <div class="flex items-center gap-2">
+                    ${
+                      item.league.logo
+                        ? `<img src="${item.league.logo}" alt="${item.league.name}" class="w-5 h-5 object-contain" onerror="this.style.display='none'" />`
+                        : ""
+                    }
+                    <span class="text-xs sm:text-sm font-bold text-slate-800">
+                      ${item.league.name}
+                    </span>
+                    ${
+                      item.league.round
+                        ? `<span class="hidden sm:inline-block text-xs text-slate-400">• ${item.league.round}</span>`
+                        : ""
+                    }
+                  </div>
+                  <div>${statusBadge}</div>
+                </div>
+
+                <!-- Đội hình thi đấu & Tỷ số (Dễ xem tổng quan trên mobile) -->
+                <div class="grid grid-cols-7 items-center gap-1.5 sm:gap-3 py-1">
+                  <!-- Đội nhà -->
+                  <div class="col-span-3 flex items-center justify-end gap-2 text-right">
+                    <span class="text-xs sm:text-base font-bold text-slate-900 leading-tight">
+                      ${item.teams.home.name}
+                    </span>
+                    <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
+                      <img
+                        src="${item.teams.home.logo}"
+                        alt="${item.teams.home.name}"
+                        class="w-full h-full object-contain"
+                        onerror="this.src='https://via.placeholder.com/32?text=FC'"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Tỷ số hoặc VS -->
+                  <div class="col-span-1 text-center flex flex-col items-center justify-center">
+                    ${
+                      isFinished || isLive
+                        ? `
+                      <div class="bg-slate-900 text-white font-mono font-bold text-xs sm:text-sm px-2 py-1 rounded-xl shadow-xs">
+                        ${item.goals.home ?? 0} - ${item.goals.away ?? 0}
+                      </div>
+                    `
+                        : `
+                      <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-500 font-bold text-xs flex items-center justify-center">
+                        VS
+                      </div>
+                    `
+                    }
+                  </div>
+
+                  <!-- Đội khách -->
+                  <div class="col-span-3 flex items-center justify-start gap-2 text-left">
+                    <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
+                      <img
+                        src="${item.teams.away.logo}"
+                        alt="${item.teams.away.name}"
+                        class="w-full h-full object-contain"
+                        onerror="this.src='https://via.placeholder.com/32?text=FC'"
+                      />
+                    </div>
+                    <span class="text-xs sm:text-base font-bold text-slate-900 leading-tight">
+                      ${item.teams.away.name}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Bảng Kèo 2 Cột (Châu Á & Tài Xỉu) -->
+                ${
+                  currentTab !== "yesterday"
+                    ? renderOddsBlock(item.oddsParsed, index)
+                    : `
+                  <div class="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs sm:text-sm text-slate-500">
+                    <span>Kết quả: <strong class="text-slate-800">${item.teams.home.name} ${item.goals.home ?? 0} - ${item.goals.away ?? 0} ${item.teams.away.name}</strong></span>
+                    <span class="text-emerald-700 font-semibold font-mono">Đã kết thúc</span>
+                  </div>
+                `
+                }
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      // ==============================================================
+      // MODAL MỐC KÈO CHẤP
+      // ==============================================================
+
+      function openHandicapModal(matchIndex) {
+        const list = matchesCache[currentTab] || [];
+        const match = list[matchIndex];
+        if (!match || !match.oddsParsed?.asianHandicap?.allLines) return;
+
+        const ah = match.oddsParsed.asianHandicap;
+        const lines = ah.allLines;
+
+        document.getElementById("modal-match-title").textContent =
+          `Kèo Châu Á: ${match.teams.home.name} vs ${match.teams.away.name}`;
+        document.getElementById("modal-match-sub").textContent =
+          `Tổng hợp ${lines.length} mốc chấp cược từ ${match.oddsParsed.bookmakerName}`;
+
+        const container = document.getElementById("modal-lines-container");
+        container.innerHTML = `
+          <div class="grid grid-cols-12 text-xs font-bold text-slate-400 uppercase pb-1.5 px-3 border-b border-slate-100">
+            <span class="col-span-4">Mốc chấp</span>
+            <span class="col-span-4 text-center">Chủ (${match.teams.home.name})</span>
+            <span class="col-span-4 text-center">Khách (${match.teams.away.name})</span>
+          </div>
+          <div class="space-y-1.5 pt-1">
+            ${lines
+              .map((line) => {
+                const isMain = Math.abs(line.hVal - ah.hVal) < 0.001;
+                return `
+                <div class="grid grid-cols-12 items-center text-xs sm:text-sm p-2 rounded-xl border transition ${
+                  isMain
+                    ? "bg-emerald-50/90 border-emerald-300 font-semibold shadow-2xs"
+                    : "bg-slate-50 border-slate-200/80 hover:bg-slate-100/70"
+                }">
+                  <div class="col-span-4 flex items-center gap-1">
+                    <span class="text-slate-800 font-semibold">${line.displayBadge}</span>
+                    ${isMain ? `<span class="px-1.5 py-0.2 rounded text-[9px] bg-emerald-600 text-white font-bold shrink-0">Kèo chính</span>` : ""}
+                  </div>
+                  <div class="col-span-4 text-center font-mono font-bold text-emerald-700">
+                    ${line.homeOdd}
+                  </div>
+                  <div class="col-span-4 text-center font-mono font-bold text-emerald-700">
+                    ${line.awayOdd}
+                  </div>
+                </div>
+              `;
+              })
+              .join("")}
+          </div>
+        `;
+
+        document.getElementById("handicap-modal").classList.remove("hidden");
+      }
+
+      function closeHandicapModal() {
+        document.getElementById("handicap-modal").classList.add("hidden");
+      }
+
+      document
+        .getElementById("handicap-modal")
+        .addEventListener("click", (e) => {
+          if (e.target.id === "handicap-modal") closeHandicapModal();
+        });
+
+      // Tự động khởi chạy
+      fetchData();
+    </script>
+  </body>
+</html>
