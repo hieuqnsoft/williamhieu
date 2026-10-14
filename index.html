@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>William Hieu - Bảng Kèo Châu Á & Lịch Thi Đấu Trực Tuyến</title>
+    <title>Lịch Thi Đấu Bóng Đá Trực Tuyến</title>
     <meta
       name="description"
       content="Xem lịch thi đấu, kết quả và tỷ lệ Kèo cho Tú Giáp, cập nhật trực tiếp cho Ngoại Hạng Anh, La Liga, Cúp C1."
@@ -75,12 +75,12 @@
               <h1
                 class="text-lg sm:text-xl font-bold font-title tracking-tight text-slate-900"
               >
-                William Hieu
+                FC CỐI ĐÁ
               </h1>
               <span
                 class="px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-emerald-100 text-emerald-800 border border-emerald-200"
               >
-                Kèo Châu Á
+                Lịch bóng đá
               </span>
             </div>
             <p
@@ -102,15 +102,16 @@
             <span id="quota-text">API: 0/100 req</span>
           </div>
 
-          <!-- Refresh Button -->
+          <!-- Refresh Live Button (Luôn xóa cache & kéo dữ liệu mới) -->
           <button
             id="btn-refresh"
-            onclick="handleRefresh(false)"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold shadow-xs transition active:scale-95"
+            onclick="handleRefresh(true)"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs shadow-emerald-600/30 transition active:scale-95"
+            title="Tự động xóa cache và cập nhật tỷ số / kèo mới nhất từ API"
           >
             <svg
               id="icon-refresh"
-              class="w-3.5 h-3.5 text-slate-500"
+              class="w-3.5 h-3.5 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -122,16 +123,7 @@
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            <span class="hidden sm:inline">Làm mới</span>
-          </button>
-
-          <!-- Force Reload Button -->
-          <button
-            onclick="handleRefresh(true)"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs shadow-emerald-600/30 transition active:scale-95"
-            title="Xóa cache và gọi dữ liệu mới từ API"
-          >
-            <span>Bỏ cache</span>
+            <span>Làm mới (Live)</span>
           </button>
         </div>
       </div>
@@ -383,9 +375,9 @@
       class="bg-white border-t border-slate-200 py-5 mt-10 text-center text-xs text-slate-500 space-y-1"
     >
       <div class="font-bold text-slate-700">
-        William Hieu • Bảng Kèo Châu Á & Tài Xỉu Trực Tuyến
+        Trang thông tin các trận đấu bóng đá với mục đích cá nhân
       </div>
-      <div>Tối ưu hiển thị cho Mobile • Dữ liệu từ API-Football</div>
+      <div>Dữ liệu từ API-Football</div>
     </footer>
 
     <!-- JavaScript Logic -->
@@ -716,7 +708,23 @@
       // TẢI DỮ LIỆU & LƯU CACHE
       // ==============================================================
 
-      async function fetchData(forceReload = false) {
+      // Hàm xóa sạch toàn bộ cache dữ liệu để luôn có thông tin mới nhất
+      function clearAllCache() {
+        try {
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith("wh_") || k.startsWith("fb_"))) {
+              keysToRemove.push(k);
+            }
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k));
+        } catch (e) {
+          console.error("Lỗi xóa cache:", e);
+        }
+      }
+
+      async function fetchData(forceReload = true) {
         const loadingEl = document.getElementById("loading");
         const matchesContainer = document.getElementById("matches-container");
         const emptyState = document.getElementById("empty-state");
@@ -725,28 +733,8 @@
         matchesContainer.innerHTML = "";
         emptyState.classList.add("hidden");
 
-        const cacheKey = "wh_soccer_data_v6";
-        const cacheTimeKey = "wh_soccer_time_v6";
-        const cached = localStorage.getItem(cacheKey);
-        const cachedTime = localStorage.getItem(cacheTimeKey);
-
-        if (
-          !forceReload &&
-          cached &&
-          cachedTime &&
-          Date.now() - parseInt(cachedTime) < 60 * 60 * 1000
-        ) {
-          try {
-            matchesCache = JSON.parse(cached);
-            loadingEl.classList.add("hidden");
-            renderCurrentView();
-            updateLeagueCounts();
-            checkApiStatus();
-            return;
-          } catch (e) {
-            console.error("Lỗi đọc cache:", e);
-          }
-        }
+        // Luôn tự động xóa sạch cache mỗi lần vào trang để hiện thông tin mới nhất
+        clearAllCache();
 
         try {
           const todayStr = getFormattedDate(0);
@@ -769,24 +757,12 @@
           const todayWithOdds = await Promise.all(
             filteredToday.map(async (match) => {
               const fixId = match.fixture.id;
-              const fixOddsKey = `wh_odds_${fixId}`;
               let rawOdds = null;
 
-              if (!forceReload) {
-                const cachedFixOdds = localStorage.getItem(fixOddsKey);
-                if (cachedFixOdds) {
-                  try {
-                    rawOdds = JSON.parse(cachedFixOdds);
-                  } catch (e) {}
-                }
-              }
-
-              if (!rawOdds) {
-                const fetchedOddsList = await apiGet(`odds?fixture=${fixId}`);
-                if (fetchedOddsList && fetchedOddsList.length > 0) {
-                  rawOdds = fetchedOddsList[0];
-                  localStorage.setItem(fixOddsKey, JSON.stringify(rawOdds));
-                }
+              // Lấy odds trực tiếp từ API thời gian thực
+              const fetchedOddsList = await apiGet(`odds?fixture=${fixId}`);
+              if (fetchedOddsList && fetchedOddsList.length > 0) {
+                rawOdds = fetchedOddsList[0];
               }
 
               return {
@@ -803,24 +779,11 @@
           const tomorrowWithOdds = await Promise.all(
             filteredTomorrow.map(async (match) => {
               const fixId = match.fixture.id;
-              const fixOddsKey = `wh_odds_${fixId}`;
               let rawOdds = null;
 
-              if (!forceReload) {
-                const cachedFixOdds = localStorage.getItem(fixOddsKey);
-                if (cachedFixOdds) {
-                  try {
-                    rawOdds = JSON.parse(cachedFixOdds);
-                  } catch (e) {}
-                }
-              }
-
-              if (!rawOdds) {
-                const fetchedOddsList = await apiGet(`odds?fixture=${fixId}`);
-                if (fetchedOddsList && fetchedOddsList.length > 0) {
-                  rawOdds = fetchedOddsList[0];
-                  localStorage.setItem(fixOddsKey, JSON.stringify(rawOdds));
-                }
+              const fetchedOddsList = await apiGet(`odds?fixture=${fixId}`);
+              if (fetchedOddsList && fetchedOddsList.length > 0) {
+                rawOdds = fetchedOddsList[0];
               }
 
               return {
@@ -840,18 +803,15 @@
             tomorrow: tomorrowWithOdds,
           };
 
-          localStorage.setItem(cacheKey, JSON.stringify(matchesCache));
-          localStorage.setItem(cacheTimeKey, Date.now().toString());
-
           showAlert(
             "success",
-            `Đã tải ${todayWithOdds.length} trận hôm nay. Kèo Châu Á & Tài Xỉu đã sẵn sàng!`,
+            `Đã tự động cập nhật dữ liệu mới nhất trực tiếp từ API (${todayWithOdds.length} trận hôm nay)!`,
           );
         } catch (error) {
           console.error("Lỗi tổng thể fetchData:", error);
           showAlert(
             "error",
-            "Có lỗi khi đồng bộ dữ liệu API. Đang sử dụng dữ liệu lưu trữ.",
+            "Có lỗi khi đồng bộ dữ liệu API. Vui lòng kiểm tra lại kết nối mạng.",
           );
         } finally {
           loadingEl.classList.add("hidden");
@@ -1042,9 +1002,18 @@
       // RENDER THẺ TRẬN ĐẤU ĐÃ KẾT THÚC (KẾT QUẢ TỶ SỐ)
       // ==============================================================
 
+      // State kiểm thử cảm xúc Tài / Xỉu cho anh Dú (null: tự động theo tỷ số thực tế, 'over': ép Nổ Tài, 'under': ép Về Xỉu)
+      let barcaOuOverride = null;
+
+      function setBarcaOuOverride(val) {
+        barcaOuOverride = val;
+        renderCurrentView();
+      }
+
       function renderFinishedMatchCard(item, isBarcaResult = false) {
         const homeScore = item.goals?.home ?? 0;
         const awayScore = item.goals?.away ?? 0;
+        const totalGoals = homeScore + awayScore;
         const homeWin = homeScore > awayScore;
         const awayWin = awayScore > homeScore;
 
@@ -1079,6 +1048,99 @@
           `
           : "";
 
+        // TÍNH TOÁN KÈO TÀI XỈU VÀ TẠO THÔNG ĐIỆP CHO ANH DÚ
+        let barcaOuBox = "";
+        if (isBarcaResult) {
+          const rawOuLine = item.oddsParsed?.overUnder?.total || "2.5";
+          const ouLine = parseFloat(rawOuLine);
+
+          let isOver = totalGoals > ouLine;
+          let isUnder = totalGoals < ouLine;
+
+          // Hỗ trợ chế độ test trực tiếp
+          if (barcaOuOverride === "over") {
+            isOver = true;
+            isUnder = false;
+          } else if (barcaOuOverride === "under") {
+            isOver = false;
+            isUnder = true;
+          }
+
+          if (isOver) {
+            barcaOuBox = `
+              <div class="mt-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs border border-emerald-400">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                    <span>🎉🍻</span>
+                    <span>NỔ TÀI! CHÚC MỪNG ANH DÚ</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-white/20 text-white">
+                    ${totalGoals} bàn > Kèo ${ouLine}
+                  </span>
+                </div>
+                <p class="text-xs sm:text-sm mt-1 text-emerald-100 font-medium">
+                  Bú đậm mâm này rồi anh Dú ơi, đếm tiền tha hồ bia bọt nhé! 💸🤑
+                </p>
+                <div class="mt-2 pt-1.5 border-t border-emerald-500/50 flex items-center justify-between text-[11px] text-emerald-200">
+                  <span>Trạng thái: <strong>Tài Thắng</strong></span>
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="setBarcaOuOverride('under')" class="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white font-bold transition">Thử Xỉu 🍜</button>
+                    <button onclick="setBarcaOuOverride(null)" class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-emerald-100 transition">Tự động</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          } else if (isUnder) {
+            barcaOuBox = `
+              <div class="mt-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-xs border border-rose-400">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                    <span>🍜😭</span>
+                    <span>VỀ XỈU RỒI! CHIA BUỒN CÙNG ANH DÚ</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-white/20 text-white">
+                    ${totalGoals} bàn < Kèo ${ouLine}
+                  </span>
+                </div>
+                <p class="text-xs sm:text-sm mt-1 text-rose-100 font-medium">
+                  Toang rồi anh Dú ơi... Tối nay hai gói mì tôm ăn tạm ấm bụng nha anh! 🙏🧊
+                </p>
+                <div class="mt-2 pt-1.5 border-t border-rose-500/50 flex items-center justify-between text-[11px] text-rose-200">
+                  <span>Trạng thái: <strong>Về Xỉu</strong></span>
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="setBarcaOuOverride('over')" class="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white font-bold transition">Thử Tài 🎉</button>
+                    <button onclick="setBarcaOuOverride(null)" class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-rose-100 transition">Tự động</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          } else {
+            barcaOuBox = `
+              <div class="mt-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-xs border border-amber-300">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                    <span>🤝😅</span>
+                    <span>HÒA KÈO TÀI XỈU!</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-slate-900/20 text-slate-900">
+                    ${totalGoals} bàn = Kèo ${ouLine}
+                  </span>
+                </div>
+                <p class="text-xs sm:text-sm mt-1 text-slate-900 font-medium">
+                  Hoàn tiền về ví nguyên vẹn, hú hồn chim én anh Dú nhé! 💨
+                </p>
+                <div class="mt-2 pt-1.5 border-t border-amber-600/30 flex items-center justify-between text-[11px] text-slate-800">
+                  <span>Trạng thái: <strong>Hòa Kèo</strong></span>
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="setBarcaOuOverride('over')" class="px-2 py-0.5 rounded bg-slate-900/15 hover:bg-slate-900/25 font-bold transition">Thử Tài 🎉</button>
+                    <button onclick="setBarcaOuOverride('under')" class="px-2 py-0.5 rounded bg-slate-900/15 hover:bg-slate-900/25 font-bold transition">Thử Xỉu 🍜</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        }
+
         return `
           <div class="${cardWrapperClass}">
             ${barcaBanner}
@@ -1103,14 +1165,14 @@
               </div>
             </div>
 
-            <!-- Tỷ số trận đấu lớn & rõ ràng -->
-            <div class="grid grid-cols-7 items-center gap-1.5 sm:gap-3 py-1.5">
+            <!-- Tỷ số trận đấu trên 1 dòng ngang như desktop -->
+            <div class="flex items-center justify-between w-full py-1.5 gap-2">
               <!-- Đội nhà -->
-              <div class="col-span-3 flex items-center justify-end gap-2 text-right">
-                <span class="text-xs sm:text-base font-bold leading-tight ${homeWin ? "text-emerald-700 font-extrabold" : "text-slate-800"}">
+              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-end min-w-0">
+                <span class="text-xs sm:text-base font-bold truncate text-right ${homeWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}">
                   ${item.teams.home.name}
                 </span>
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.home.logo}"
                     alt="${item.teams.home.name}"
@@ -1120,16 +1182,14 @@
                 </div>
               </div>
 
-              <!-- Hộp Tỷ số Nổi bật -->
-              <div class="col-span-1 text-center flex flex-col items-center justify-center">
-                <div class="bg-slate-900 text-white font-mono font-bold text-sm sm:text-base px-2.5 sm:px-3 py-1 rounded-xl shadow-xs tracking-wider">
-                  ${homeScore} - ${awayScore}
-                </div>
+              <!-- Hộp Tỷ số Nổi bật (Chính giữa) -->
+              <div class="shrink-0 px-2.5 sm:px-3 py-1 bg-slate-900 text-white font-mono font-bold text-xs sm:text-base rounded-xl shadow-xs text-center tracking-wider whitespace-nowrap">
+                ${homeScore} - ${awayScore}
               </div>
 
               <!-- Đội khách -->
-              <div class="col-span-3 flex items-center justify-start gap-2 text-left">
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
+              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-start min-w-0">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.away.logo}"
                     alt="${item.teams.away.name}"
@@ -1137,7 +1197,7 @@
                     onerror="this.src='https://via.placeholder.com/32?text=FC'"
                   />
                 </div>
-                <span class="text-xs sm:text-base font-bold leading-tight ${awayWin ? "text-emerald-700 font-extrabold" : "text-slate-800"}">
+                <span class="text-xs sm:text-base font-bold truncate text-left ${awayWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}">
                   ${item.teams.away.name}
                 </span>
               </div>
@@ -1150,6 +1210,9 @@
                 ${homeWin ? `🏆 ${item.teams.home.name} thắng` : awayWin ? `🏆 ${item.teams.away.name} thắng` : "🤝 Hai đội hòa"}
               </span>
             </div>
+
+            <!-- Khối chúc mừng / chia buồn hài hước cho anh Dú -->
+            ${barcaOuBox}
           </div>
         `;
       }
@@ -1231,14 +1294,14 @@
               <div>${statusBadge}</div>
             </div>
 
-            <!-- Đội hình thi đấu & VS -->
-            <div class="grid grid-cols-7 items-center gap-1.5 sm:gap-3 py-1">
+            <!-- Đội hình thi đấu & VS trên 1 dòng ngang như desktop -->
+            <div class="flex items-center justify-between w-full py-1.5 gap-2">
               <!-- Đội nhà -->
-              <div class="col-span-3 flex items-center justify-end gap-2 text-right">
-                <span class="text-xs sm:text-base font-bold text-slate-900 leading-tight">
+              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-end min-w-0">
+                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-right">
                   ${item.teams.home.name}
                 </span>
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.home.logo}"
                     alt="${item.teams.home.name}"
@@ -1248,17 +1311,17 @@
                 </div>
               </div>
 
-              <!-- VS hoặc Tỷ số live -->
-              <div class="col-span-1 text-center flex flex-col items-center justify-center">
+              <!-- VS hoặc Tỷ số live (Chính giữa) -->
+              <div class="shrink-0 text-center flex items-center justify-center">
                 ${
                   isLive
                     ? `
-                  <div class="bg-rose-600 text-white font-mono font-bold text-xs sm:text-sm px-2 py-1 rounded-xl shadow-xs">
-                    ${item.goals.home ?? 0} - ${item.goals.away ?? 0}
+                  <div class="bg-rose-600 text-white font-mono font-bold text-xs sm:text-sm px-2 sm:px-2.5 py-1 rounded-xl shadow-xs whitespace-nowrap">
+                    ${item.goals?.home ?? 0} - ${item.goals?.away ?? 0}
                   </div>
                 `
                     : `
-                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-500 font-bold text-xs flex items-center justify-center">
+                  <div class="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 font-bold text-xs whitespace-nowrap">
                     VS
                   </div>
                 `
@@ -1266,8 +1329,8 @@
               </div>
 
               <!-- Đội khách -->
-              <div class="col-span-3 flex items-center justify-start gap-2 text-left">
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
+              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-start min-w-0">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.away.logo}"
                     alt="${item.teams.away.name}"
@@ -1275,7 +1338,7 @@
                     onerror="this.src='https://via.placeholder.com/32?text=FC'"
                   />
                 </div>
-                <span class="text-xs sm:text-base font-bold text-slate-900 leading-tight">
+                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-left">
                   ${item.teams.away.name}
                 </span>
               </div>
@@ -1450,6 +1513,50 @@
           );
         }
 
+        // Nếu đang bật mô phỏng khung giờ 5h-10h sáng mà chưa có trận Barca kết thúc thực tế, thêm mẫu trận Barca để test
+        if (
+          timeModeSetting === "morning" &&
+          !finishedRecent.some(isBarcelonaMatch)
+        ) {
+          const sampleBarcaGoals =
+            barcaOuOverride === "under"
+              ? { home: 0, away: 1 }
+              : { home: 1, away: 3 };
+          finishedRecent.unshift({
+            fixture: {
+              id: 999999,
+              date: new Date().toISOString(),
+              status: { short: "FT", long: "Match Finished" },
+            },
+            league: {
+              id: 2,
+              name: "UEFA Champions League",
+              logo: "https://media.api-sports.io/football/leagues/2.png",
+              round: "Vòng bảng Champions League",
+            },
+            teams: {
+              home: {
+                name: "Galatasaray",
+                logo: "https://media.api-sports.io/football/teams/645.png",
+              },
+              away: {
+                name: "Barcelona",
+                logo: "https://media.api-sports.io/football/teams/529.png",
+              },
+            },
+            goals: sampleBarcaGoals,
+            oddsParsed: {
+              overUnder: {
+                total: "2.5",
+                displayBadge: "Tài Xỉu 2.5",
+                overOdd: "1.65",
+                underOdd: "2.25",
+              },
+              bookmakerName: "Bet365",
+            },
+          });
+        }
+
         // Đảm bảo trận của Barcelona luôn được ghim lên đầu tiên trong từng nhóm
         finishedRecent.sort(
           (a, b) =>
@@ -1610,8 +1717,9 @@
           if (e.target.id === "handicap-modal") closeHandicapModal();
         });
 
-      // Tự động khởi chạy
-      fetchData();
+      // Tự động xóa sạch cache và kéo dữ liệu mới nhất trực tiếp từ API mỗi lần vào trang
+      clearAllCache();
+      fetchData(true);
     </script>
   </body>
 </html>
