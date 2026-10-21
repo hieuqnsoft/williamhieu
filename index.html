@@ -23,7 +23,7 @@
     <style>
       /* Cỡ chữ cơ sở tăng lên thêm 2px (từ 16px lên 18px) */
       html {
-        font-size: 16px;
+        font-size: 14px;
         -webkit-text-size-adjust: 100%;
       }
       body {
@@ -123,7 +123,7 @@
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            <span>Làm mới (Live)</span>
+            <span>Làm mới</span>
           </button>
         </div>
       </div>
@@ -252,32 +252,6 @@
             La Liga <span id="count-140" class="ml-0.5 opacity-70">(0)</span>
           </button>
         </div>
-
-        <!-- Thanh thông tin chế độ hiển thị theo khung giờ 5h - 10h sáng VN -->
-        <div
-          id="time-window-banner"
-          class="flex flex-wrap items-center justify-between gap-2 p-2.5 px-3 rounded-xl border text-xs sm:text-sm font-medium transition"
-        >
-          <div class="flex items-center gap-2">
-            <span id="time-window-icon" class="text-base">🌅</span>
-            <span id="time-window-text"
-              >Đang tính toán khung giờ hiển thị...</span
-            >
-          </div>
-          <!-- Nút chuyển đổi / mô phỏng khung giờ để test thuận tiện -->
-          <button
-            onclick="cycleTimeMode()"
-            id="btn-time-mode"
-            class="px-2.5 py-1 rounded-lg bg-white/90 hover:bg-white text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition active:scale-95"
-            title="Bấm để chuyển đổi giữa tự động giờ VN và xem thử 2 chế độ"
-          >
-            Chế độ:
-            <strong id="time-mode-name" class="text-emerald-700"
-              >Tự động (Giờ VN)</strong
-            >
-            ↻
-          </button>
-        </div>
       </div>
 
       <!-- Loading State -->
@@ -400,13 +374,8 @@
         tomorrow: [],
       };
 
-      // Chế độ mô phỏng khung giờ: 'auto' | 'morning' (5h-10h) | 'regular' (ngoài 5h-10h)
-      let timeModeSetting = "auto";
-
-      // Lấy giờ hiện tại theo múi giờ Việt Nam (Asia/Ho_Chi_Minh)
+      // Lấy giờ hiện tại chuẩn theo múi giờ Việt Nam (Asia/Ho_Chi_Minh)
       function getVietnamHour() {
-        if (timeModeSetting === "morning") return 7; // Mô phỏng 7h sáng
-        if (timeModeSetting === "regular") return 15; // Mô phỏng 15h chiều (ngoài 5h-10h)
         try {
           const vnString = new Date().toLocaleString("en-US", {
             timeZone: "Asia/Ho_Chi_Minh",
@@ -422,19 +391,133 @@
       // Kiểm tra xem hiện tại có thuộc khung giờ 5h - 10h sáng VN hay không
       function isMorningResultHours() {
         const hour = getVietnamHour();
-        return hour >= 5 && hour < 10; // 5, 6, 7, 8, 9 giờ
+        return hour >= 5 && hour < 10; // 5, 6, 7, 8, 9 giờ sáng
       }
 
-      // Chuyển đổi qua lại giữa các chế độ giờ để kiểm thử
-      function cycleTimeMode() {
-        if (timeModeSetting === "auto") {
-          timeModeSetting = "morning";
-        } else if (timeModeSetting === "morning") {
-          timeModeSetting = "regular";
-        } else {
-          timeModeSetting = "auto";
+      // ==============================================================
+      // BẢNG TÊN VIẾT TẮT / RÚT GỌN CHO CÁC CLB
+      // ==============================================================
+      const CLUB_SHORT_NAMES = {
+        // Ngoại Hạng Anh
+        "Manchester United": "Man Utd",
+        "Manchester City": "Man City",
+        "Tottenham Hotspur": "Tottenham",
+        "Wolverhampton Wanderers": "Wolves",
+        "Brighton and Hove Albion": "Brighton",
+        "Brighton & Hove Albion": "Brighton",
+        "West Ham United": "West Ham",
+        "Newcastle United": "Newcastle",
+        "Nottingham Forest": "Nottingham",
+        "Sheffield United": "Sheffield Utd",
+        "Crystal Palace": "Crystal Palace",
+        "Aston Villa": "Aston Villa",
+        "Leicester City": "Leicester",
+        "AFC Bournemouth": "Bournemouth",
+        "Ipswich Town": "Ipswich",
+        Southampton: "Southampton",
+        Arsenal: "Arsenal",
+        Chelsea: "Chelsea",
+        Liverpool: "Liverpool",
+        Everton: "Everton",
+        Fulham: "Fulham",
+        Brentford: "Brentford",
+
+        // La Liga
+        "FC Barcelona": "Barca",
+        Barcelona: "Barca",
+        "Real Madrid": "Real Madrid",
+        "Atletico Madrid": "Atlético",
+        "Atlético Madrid": "Atlético",
+        "Athletic Club": "Bilbao",
+        "Athletic Bilbao": "Bilbao",
+        "Real Sociedad": "Sociedad",
+        "Real Betis": "Betis",
+        Villarreal: "Villarreal",
+        Sevilla: "Sevilla",
+        Valencia: "Valencia",
+        "Celta Vigo": "Celta",
+        "RC Celta": "Celta",
+        Girona: "Girona",
+        Espanyol: "Espanyol",
+        "RCD Espanyol": "Espanyol",
+        "RCD Espanyol de Barcelona": "Espanyol",
+        Mallorca: "Mallorca",
+        "RCD Mallorca": "Mallorca",
+        Osasuna: "Osasuna",
+        "CA Osasuna": "Osasuna",
+        Getafe: "Getafe",
+        "Rayo Vallecano": "Vallecano",
+        Alaves: "Alaves",
+        "Deportivo Alaves": "Alaves",
+        "Deportivo Alavés": "Alaves",
+        "Las Palmas": "Las Palmas",
+        "UD Las Palmas": "Las Palmas",
+        "Real Valladolid": "Valladolid",
+        Leganes: "Leganés",
+        "CD Leganes": "Leganés",
+
+        // Cúp C1 & Châu Âu
+        "Paris Saint Germain": "PSG",
+        "Paris Saint-Germain": "PSG",
+        "Bayern Munich": "Bayern",
+        "Bayern München": "Bayern",
+        "Borussia Dortmund": "Dortmund",
+        "Bayer Leverkusen": "Leverkusen",
+        "RB Leipzig": "Leipzig",
+        Inter: "Inter",
+        Internazionale: "Inter",
+        "Inter Milan": "Inter",
+        "AC Milan": "AC Milan",
+        Juventus: "Juventus",
+        Atalanta: "Atalanta",
+        "Sporting CP": "Sporting",
+        Benfica: "Benfica",
+        "SL Benfica": "Benfica",
+        Porto: "Porto",
+        "FC Porto": "Porto",
+        "PSV Eindhoven": "PSV",
+        Feyenoord: "Feyenoord",
+        Celtic: "Celtic",
+        "Shakhtar Donetsk": "Shakhtar",
+        "Red Star Belgrade": "Crvena Zvezda",
+        "Young Boys": "Young Boys",
+        Monaco: "Monaco",
+        "AS Monaco": "Monaco",
+        Lille: "Lille",
+        Brest: "Brest",
+        Stuttgart: "Stuttgart",
+        "VfB Stuttgart": "Stuttgart",
+        Bologna: "Bologna",
+        "Sparta Praha": "Sparta Prague",
+        Salzburg: "Salzburg",
+        "Red Bull Salzburg": "Salzburg",
+        "Club Brugge KV": "Club Brugge",
+        "Dinamo Zagreb": "Dinamo Zagreb",
+        "Slovan Bratislava": "Bratislava",
+        "Sturm Graz": "Sturm Graz",
+      };
+
+      // Hàm lấy tên rút gọn của CLB để giao diện không bị dài / vỡ khung
+      function getShortClubName(name) {
+        if (!name) return "";
+        const trimmed = name.trim();
+        if (CLUB_SHORT_NAMES[trimmed]) return CLUB_SHORT_NAMES[trimmed];
+
+        const lower = trimmed.toLowerCase();
+        for (const [key, val] of Object.entries(CLUB_SHORT_NAMES)) {
+          if (key.toLowerCase() === lower) return val;
         }
-        renderCurrentView();
+
+        // Tự động rút gọn tiền tố / hậu tố thông dụng nếu chưa có trong danh mục
+        return (
+          trimmed
+            .replace(/^(FC|CF|AFC|RCD|UD|CD|BSC|SK|FK)\s+/i, "")
+            .replace(/\s+(FC|CF|AFC|SAD)$/i, "")
+            .replace(/\s+United$/i, " Utd")
+            .replace(/\s+City$/i, " City")
+            .replace(/Wanderers$/i, "")
+            .trim() || trimmed
+        );
       }
 
       const getFormattedDate = (offsetDays = 0) => {
@@ -582,8 +665,10 @@
         const priority = [
           "Bet365",
           "Pinnacle",
+          "188Bet",
           "SBO",
           "1xBet",
+          "Dafabet",
           "Betano",
           "Betfair",
           "Marathonbet",
@@ -769,8 +854,8 @@
                 ...match,
                 oddsParsed: extractOdds(
                   rawOdds,
-                  match.teams.home.name,
-                  match.teams.away.name,
+                  getShortClubName(match.teams.home.name),
+                  getShortClubName(match.teams.away.name),
                 ),
               };
             }),
@@ -790,8 +875,8 @@
                 ...match,
                 oddsParsed: extractOdds(
                   rawOdds,
-                  match.teams.home.name,
-                  match.teams.away.name,
+                  getShortClubName(match.teams.home.name),
+                  getShortClubName(match.teams.away.name),
                 ),
               };
             }),
@@ -802,11 +887,6 @@
             yesterday: filteredYesterday,
             tomorrow: tomorrowWithOdds,
           };
-
-          showAlert(
-            "success",
-            `Đã tự động cập nhật dữ liệu mới nhất trực tiếp từ API (${todayWithOdds.length} trận hôm nay)!`,
-          );
         } catch (error) {
           console.error("Lỗi tổng thể fetchData:", error);
           showAlert(
@@ -1002,20 +1082,15 @@
       // RENDER THẺ TRẬN ĐẤU ĐÃ KẾT THÚC (KẾT QUẢ TỶ SỐ)
       // ==============================================================
 
-      // State kiểm thử cảm xúc Tài / Xỉu cho anh Dú (null: tự động theo tỷ số thực tế, 'over': ép Nổ Tài, 'under': ép Về Xỉu)
-      let barcaOuOverride = null;
-
-      function setBarcaOuOverride(val) {
-        barcaOuOverride = val;
-        renderCurrentView();
-      }
-
       function renderFinishedMatchCard(item, isBarcaResult = false) {
         const homeScore = item.goals?.home ?? 0;
         const awayScore = item.goals?.away ?? 0;
         const totalGoals = homeScore + awayScore;
         const homeWin = homeScore > awayScore;
         const awayWin = awayScore > homeScore;
+
+        const homeName = getShortClubName(item.teams.home?.name || "");
+        const awayName = getShortClubName(item.teams.away?.name || "");
 
         const dateObj = new Date(item.fixture.date);
         const timeStr = dateObj.toLocaleTimeString("vi-VN", {
@@ -1054,17 +1129,8 @@
           const rawOuLine = item.oddsParsed?.overUnder?.total || "2.5";
           const ouLine = parseFloat(rawOuLine);
 
-          let isOver = totalGoals > ouLine;
-          let isUnder = totalGoals < ouLine;
-
-          // Hỗ trợ chế độ test trực tiếp
-          if (barcaOuOverride === "over") {
-            isOver = true;
-            isUnder = false;
-          } else if (barcaOuOverride === "under") {
-            isOver = false;
-            isUnder = true;
-          }
+          const isOver = totalGoals > ouLine;
+          const isUnder = totalGoals < ouLine;
 
           if (isOver) {
             barcaOuBox = `
@@ -1083,10 +1149,6 @@
                 </p>
                 <div class="mt-2 pt-1.5 border-t border-emerald-500/50 flex items-center justify-between text-[11px] text-emerald-200">
                   <span>Trạng thái: <strong>Tài Thắng</strong></span>
-                  <div class="flex items-center gap-1.5">
-                    <button onclick="setBarcaOuOverride('under')" class="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white font-bold transition">Thử Xỉu 🍜</button>
-                    <button onclick="setBarcaOuOverride(null)" class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-emerald-100 transition">Tự động</button>
-                  </div>
                 </div>
               </div>
             `;
@@ -1107,10 +1169,6 @@
                 </p>
                 <div class="mt-2 pt-1.5 border-t border-rose-500/50 flex items-center justify-between text-[11px] text-rose-200">
                   <span>Trạng thái: <strong>Về Xỉu</strong></span>
-                  <div class="flex items-center gap-1.5">
-                    <button onclick="setBarcaOuOverride('over')" class="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white font-bold transition">Thử Tài 🎉</button>
-                    <button onclick="setBarcaOuOverride(null)" class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-rose-100 transition">Tự động</button>
-                  </div>
                 </div>
               </div>
             `;
@@ -1131,10 +1189,6 @@
                 </p>
                 <div class="mt-2 pt-1.5 border-t border-amber-600/30 flex items-center justify-between text-[11px] text-slate-800">
                   <span>Trạng thái: <strong>Hòa Kèo</strong></span>
-                  <div class="flex items-center gap-1.5">
-                    <button onclick="setBarcaOuOverride('over')" class="px-2 py-0.5 rounded bg-slate-900/15 hover:bg-slate-900/25 font-bold transition">Thử Tài 🎉</button>
-                    <button onclick="setBarcaOuOverride('under')" class="px-2 py-0.5 rounded bg-slate-900/15 hover:bg-slate-900/25 font-bold transition">Thử Xỉu 🍜</button>
-                  </div>
                 </div>
               </div>
             `;
@@ -1169,13 +1223,13 @@
             <div class="flex items-center justify-between w-full py-1.5 gap-2">
               <!-- Đội nhà -->
               <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-end min-w-0">
-                <span class="text-xs sm:text-base font-bold truncate text-right ${homeWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}">
-                  ${item.teams.home.name}
+                <span class="text-xs sm:text-base font-bold truncate text-right ${homeWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}" title="${item.teams.home.name}">
+                  ${homeName}
                 </span>
                 <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.home.logo}"
-                    alt="${item.teams.home.name}"
+                    alt="${homeName}"
                     class="w-full h-full object-contain"
                     onerror="this.src='https://via.placeholder.com/32?text=FC'"
                   />
@@ -1192,22 +1246,22 @@
                 <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.away.logo}"
-                    alt="${item.teams.away.name}"
+                    alt="${awayName}"
                     class="w-full h-full object-contain"
                     onerror="this.src='https://via.placeholder.com/32?text=FC'"
                   />
                 </div>
-                <span class="text-xs sm:text-base font-bold truncate text-left ${awayWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}">
-                  ${item.teams.away.name}
+                <span class="text-xs sm:text-base font-bold truncate text-left ${awayWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}" title="${item.teams.away.name}">
+                  ${awayName}
                 </span>
               </div>
             </div>
 
             <!-- Dòng kết quả tóm tắt -->
             <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span>Chung cuộc: <strong class="text-slate-800">${item.teams.home.name} ${homeScore} - ${awayScore} ${item.teams.away.name}</strong></span>
+              <span>Chung cuộc: <strong class="text-slate-800">${homeName} ${homeScore} - ${awayScore} ${awayName}</strong></span>
               <span class="text-emerald-700 font-semibold">
-                ${homeWin ? `🏆 ${item.teams.home.name} thắng` : awayWin ? `🏆 ${item.teams.away.name} thắng` : "🤝 Hai đội hòa"}
+                ${homeWin ? `🏆 ${homeName} thắng` : awayWin ? `🏆 ${awayName} thắng` : "🤝 Hai đội hòa"}
               </span>
             </div>
 
@@ -1222,6 +1276,9 @@
       // ==============================================================
 
       function renderUpcomingMatchCard(item, index, isBarca = false) {
+        const homeName = getShortClubName(item.teams.home?.name || "");
+        const awayName = getShortClubName(item.teams.away?.name || "");
+
         const dateObj = new Date(item.fixture.date);
         const timeStr = dateObj.toLocaleTimeString("vi-VN", {
           hour: "2-digit",
@@ -1298,13 +1355,13 @@
             <div class="flex items-center justify-between w-full py-1.5 gap-2">
               <!-- Đội nhà -->
               <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-end min-w-0">
-                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-right">
-                  ${item.teams.home.name}
+                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-right" title="${item.teams.home.name}">
+                  ${homeName}
                 </span>
                 <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.home.logo}"
-                    alt="${item.teams.home.name}"
+                    alt="${homeName}"
                     class="w-full h-full object-contain"
                     onerror="this.src='https://via.placeholder.com/32?text=FC'"
                   />
@@ -1333,13 +1390,13 @@
                 <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
                   <img
                     src="${item.teams.away.logo}"
-                    alt="${item.teams.away.name}"
+                    alt="${awayName}"
                     class="w-full h-full object-contain"
                     onerror="this.src='https://via.placeholder.com/32?text=FC'"
                   />
                 </div>
-                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-left">
-                  ${item.teams.away.name}
+                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-left" title="${item.teams.away.name}">
+                  ${awayName}
                 </span>
               </div>
             </div>
@@ -1350,48 +1407,36 @@
         `;
       }
 
-      // ==============================================================
-      // BỘ ĐIỀU HƯỚNG HIỂN THỊ THÔNG MINH THEO KHUNG GIỜ 5H - 10H
-      // ==============================================================
-
-      function updateTimeWindowBanner(isMorning) {
-        const banner = document.getElementById("time-window-banner");
-        const icon = document.getElementById("time-window-icon");
-        const text = document.getElementById("time-window-text");
-        const modeName = document.getElementById("time-mode-name");
-
-        if (!banner || !text || !modeName) return;
-
-        const currentHour = getVietnamHour();
-
-        if (timeModeSetting === "morning") {
-          modeName.textContent = "Mô phỏng 5h - 10h";
-        } else if (timeModeSetting === "regular") {
-          modeName.textContent = "Mô phỏng ngoài 5h-10h";
-        } else {
-          modeName.textContent = `Tự động (${currentHour}h VN)`;
-        }
-
-        if (isMorning) {
-          banner.className =
-            "flex flex-wrap items-center justify-between gap-2 p-2.5 px-3 rounded-xl border border-amber-200 bg-amber-50/70 text-amber-900 text-xs sm:text-sm font-medium transition";
-          icon.textContent = "🌅";
-          text.innerHTML = `<strong>Khung giờ 5h - 10h sáng:</strong> Đang ưu tiên hiển thị <strong>Kết quả đêm qua trên cùng</strong> để dễ theo dõi`;
-        } else {
-          banner.className =
-            "flex flex-wrap items-center justify-between gap-2 p-2.5 px-3 rounded-xl border border-emerald-200 bg-emerald-50/60 text-emerald-900 text-xs sm:text-sm font-medium transition";
-          icon.textContent = "⚽";
-          text.innerHTML = `<strong>Khung giờ chuẩn:</strong> Ưu tiên hiển thị <strong>Kèo các trận tiếp theo trên cùng</strong> • Kết quả đã chuyển xuống dưới`;
-        }
-      }
-
       function renderCurrentView() {
         const matchesContainer = document.getElementById("matches-container");
         const emptyState = document.getElementById("empty-state");
         const emptySubtext = document.getElementById("empty-subtext");
 
         const isMorning = isMorningResultHours();
-        updateTimeWindowBanner(isMorning);
+
+        // Helper hàm tìm kiếm thông minh theo cả tên đầy đủ, tên viết tắt và alias
+        const matchSearch = (m, q) => {
+          if (!q) return true;
+          const h = (m.teams?.home?.name || "").toLowerCase();
+          const a = (m.teams?.away?.name || "").toLowerCase();
+          const hShort = getShortClubName(
+            m.teams?.home?.name || "",
+          ).toLowerCase();
+          const aShort = getShortClubName(
+            m.teams?.away?.name || "",
+          ).toLowerCase();
+          const l = (m.league?.name || "").toLowerCase();
+          return (
+            h.includes(q) ||
+            a.includes(q) ||
+            hShort.includes(q) ||
+            aShort.includes(q) ||
+            l.includes(q) ||
+            (q === "mu" &&
+              (h.includes("manchester united") ||
+                a.includes("manchester united")))
+          );
+        };
 
         // Trường hợp Tab "Hôm qua": Chỉ hiển thị kết quả
         if (currentTab === "yesterday") {
@@ -1400,12 +1445,7 @@
             list = list.filter((m) => m.league.id === currentLeagueFilter);
           }
           if (searchQuery) {
-            list = list.filter(
-              (m) =>
-                m.teams.home.name.toLowerCase().includes(searchQuery) ||
-                m.teams.away.name.toLowerCase().includes(searchQuery) ||
-                m.league.name.toLowerCase().includes(searchQuery),
-            );
+            list = list.filter((m) => matchSearch(m, searchQuery));
           }
 
           if (list.length === 0) {
@@ -1436,12 +1476,7 @@
             list = list.filter((m) => m.league.id === currentLeagueFilter);
           }
           if (searchQuery) {
-            list = list.filter(
-              (m) =>
-                m.teams.home.name.toLowerCase().includes(searchQuery) ||
-                m.teams.away.name.toLowerCase().includes(searchQuery) ||
-                m.league.name.toLowerCase().includes(searchQuery),
-            );
+            list = list.filter((m) => matchSearch(m, searchQuery));
           }
 
           if (list.length === 0) {
@@ -1477,12 +1512,7 @@
           );
         }
         if (searchQuery) {
-          todayList = todayList.filter(
-            (m) =>
-              m.teams.home.name.toLowerCase().includes(searchQuery) ||
-              m.teams.away.name.toLowerCase().includes(searchQuery) ||
-              m.league.name.toLowerCase().includes(searchQuery),
-          );
+          todayList = todayList.filter((m) => matchSearch(m, searchQuery));
         }
 
         // 1. Tách các trận đã có kết quả (Finished) và các trận sắp đá/trực tiếp (Upcoming)
@@ -1511,50 +1541,6 @@
               ["FT", "AET", "PEN"].includes(m.fixture.status?.short) ||
               m.goals?.home !== null,
           );
-        }
-
-        // Nếu đang bật mô phỏng khung giờ 5h-10h sáng mà chưa có trận Barca kết thúc thực tế, thêm mẫu trận Barca để test
-        if (
-          timeModeSetting === "morning" &&
-          !finishedRecent.some(isBarcelonaMatch)
-        ) {
-          const sampleBarcaGoals =
-            barcaOuOverride === "under"
-              ? { home: 0, away: 1 }
-              : { home: 1, away: 3 };
-          finishedRecent.unshift({
-            fixture: {
-              id: 999999,
-              date: new Date().toISOString(),
-              status: { short: "FT", long: "Match Finished" },
-            },
-            league: {
-              id: 2,
-              name: "UEFA Champions League",
-              logo: "https://media.api-sports.io/football/leagues/2.png",
-              round: "Vòng bảng Champions League",
-            },
-            teams: {
-              home: {
-                name: "Galatasaray",
-                logo: "https://media.api-sports.io/football/teams/645.png",
-              },
-              away: {
-                name: "Barcelona",
-                logo: "https://media.api-sports.io/football/teams/529.png",
-              },
-            },
-            goals: sampleBarcaGoals,
-            oddsParsed: {
-              overUnder: {
-                total: "2.5",
-                displayBadge: "Tài Xỉu 2.5",
-                overOdd: "1.65",
-                underOdd: "2.25",
-              },
-              bookmakerName: "Bet365",
-            },
-          });
         }
 
         // Đảm bảo trận của Barcelona luôn được ghim lên đầu tiên trong từng nhóm
@@ -1665,8 +1651,11 @@
         const ah = match.oddsParsed.asianHandicap;
         const lines = ah.allLines;
 
+        const homeName = getShortClubName(match.teams.home?.name || "");
+        const awayName = getShortClubName(match.teams.away?.name || "");
+
         document.getElementById("modal-match-title").textContent =
-          `Kèo Châu Á: ${match.teams.home.name} vs ${match.teams.away.name}`;
+          `Kèo Châu Á: ${homeName} vs ${awayName}`;
         document.getElementById("modal-match-sub").textContent =
           `Tổng hợp ${lines.length} mốc chấp cược từ ${match.oddsParsed.bookmakerName}`;
 
@@ -1674,8 +1663,8 @@
         container.innerHTML = `
           <div class="grid grid-cols-12 text-xs font-bold text-slate-400 uppercase pb-1.5 px-3 border-b border-slate-100">
             <span class="col-span-4">Mốc chấp</span>
-            <span class="col-span-4 text-center">Chủ (${match.teams.home.name})</span>
-            <span class="col-span-4 text-center">Khách (${match.teams.away.name})</span>
+            <span class="col-span-4 text-center">Chủ (${homeName})</span>
+            <span class="col-span-4 text-center">Khách (${awayName})</span>
           </div>
           <div class="space-y-1.5 pt-1">
             ${lines
