@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/football-data/:path*",
+      "destination": "https://api.football-data.org/v4/:path*"
+    }
+  ]
+}
