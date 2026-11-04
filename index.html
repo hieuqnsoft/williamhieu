@@ -75,7 +75,7 @@
               <h1
                 class="text-lg sm:text-xl font-bold font-title tracking-tight text-slate-900"
               >
-                FC CỐI ĐÁ
+                WILLIAM HIEU
               </h1>
               <span
                 class="px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-emerald-100 text-emerald-800 border border-emerald-200"
@@ -192,7 +192,7 @@
               type="text"
               id="search-input"
               oninput="handleSearch(this.value)"
-              placeholder="Tìm CLB (Barca, Arsenal...)"
+              placeholder="Tìm CLB (MU, Arsenal, Real Madrid...)"
               class="w-full pl-9 pr-3.5 py-1.5 text-xs sm:text-sm bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-emerald-500 rounded-xl focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
             />
             <svg
@@ -384,6 +384,24 @@
       // 2: UEFA Champions League, 39: Premier League, 140: La Liga
       const TARGET_LEAGUES = [2, 39, 140];
 
+      // Hàm nhận diện trận đấu có Manchester United (MU)
+      function isMUMatch(item) {
+        if (!item || !item.teams) return false;
+        const hId = item.teams.home?.id;
+        const aId = item.teams.away?.id;
+        if (hId === 33 || aId === 33) return true;
+        const hName = (item.teams.home?.name || "").toLowerCase();
+        const aName = (item.teams.away?.name || "").toLowerCase();
+        return (
+          hName.includes("manchester united") ||
+          hName.includes("man united") ||
+          hName.includes("man utd") ||
+          aName.includes("manchester united") ||
+          aName.includes("man united") ||
+          aName.includes("man utd")
+        );
+      }
+
       // State ứng dụng
       let currentTab = "today"; // 'yesterday' | 'today' | 'tomorrow'
       let currentLeagueFilter = "all"; // 'all' | 2 | 39 | 140
@@ -486,7 +504,6 @@
         "RB Leipzig": "Leipzig",
         Inter: "Inter",
         Internazionale: "Inter",
-        "Inter Milan": "Inter",
         "AC Milan": "AC Milan",
         Juventus: "Juventus",
         Atalanta: "Atalanta",
@@ -515,6 +532,20 @@
         "Dinamo Zagreb": "Dinamo Zagreb",
         "Slovan Bratislava": "Bratislava",
         "Sturm Graz": "Sturm Graz",
+
+        // MLS (Inter Miami) & Saudi Pro League (Al Nassr)
+        "Inter Miami CF": "Inter Miami",
+        "Inter Miami": "Inter Miami",
+        "Al-Nassr": "Al Nassr",
+        "Al Nassr FC": "Al Nassr",
+        "Al-Nassr FC": "Al Nassr",
+        "Al Hilal": "Al Hilal",
+        "Al-Hilal": "Al Hilal",
+        "Al-Hilal FC": "Al Hilal",
+        "Al-Ittihad FC": "Al Ittihad",
+        "Al Ittihad": "Al Ittihad",
+        "Al-Ahli SFC": "Al Ahli",
+        "Al Ahli": "Al Ahli",
       };
 
       // Hàm lấy tên rút gọn của CLB để giao diện không bị dài / vỡ khung
@@ -582,22 +613,41 @@
         banner.classList.remove("hidden");
       }
 
-      // Kiểm tra xem trận đấu có Barcelona hay không
-      function isBarcelonaMatch(item) {
-        if (!item || !item.teams) return false;
-        const home = (item.teams.home?.name || "").toLowerCase();
-        const away = (item.teams.away?.name || "").toLowerCase();
-        return (
-          home.includes("barcelona") ||
-          home.includes("barca") ||
-          away.includes("barcelona") ||
-          away.includes("barca")
-        );
+      // ==============================================================
+      // XỬ LÝ KÈO CHÂU Á, TÀI XỈU & 1X2 CHUẨN THỂ THAO
+      // ==============================================================
+
+      function formatLineValue(val) {
+        if (val === null || val === undefined || isNaN(val)) return "0";
+        const num = parseFloat(val);
+        const abs = Math.abs(num);
+        const integer = Math.floor(abs);
+        const frac = Math.round((abs - integer) * 100) / 100;
+
+        let fracStr = "";
+        if (frac === 0.25) {
+          fracStr = integer === 0 ? "0/0.5" : `${integer}/${integer}.5`;
+        } else if (frac === 0.5) {
+          fracStr = integer === 0 ? "0.5" : `${integer}.5`;
+        } else if (frac === 0.75) {
+          fracStr = integer === 0 ? "0.5/1" : `${integer}.5/${integer + 1}`;
+        } else {
+          fracStr = `${integer}`;
+        }
+        return fracStr;
       }
 
-      // ==============================================================
-      // XỬ LÝ KÈO CHÂU Á & TÀI XỈU
-      // ==============================================================
+      function formatHandicapBadge(hVal, isHome = true) {
+        if (hVal === 0 || isNaN(hVal)) return "0";
+        const num = isHome ? hVal : -hVal;
+        const str = formatLineValue(num);
+        return num > 0 ? `+${str}` : `-${str}`;
+      }
+
+      function formatOverUnderBadge(total, isOver = true) {
+        const str = formatLineValue(total);
+        return isOver ? `Tài ${str}` : `Xỉu ${str}`;
+      }
 
       function formatHandicapPair(homeItem, awayItem, homeTeam, awayTeam) {
         const hMatch = homeItem.value.match(/([+-]?\d+(\.\d+)?)/);
@@ -613,13 +663,13 @@
           awayLabel = `${awayTeam} (0)`;
         } else if (hVal < 0) {
           const abs = Math.abs(hVal);
-          displayBadge = `Chấp ${abs}`;
-          homeLabel = `${homeTeam} (-${abs})`;
-          awayLabel = `${awayTeam} (+${abs})`;
+          displayBadge = `Chấp ${formatLineValue(abs)}`;
+          homeLabel = `${homeTeam} (-${formatLineValue(abs)})`;
+          awayLabel = `${awayTeam} (+${formatLineValue(abs)})`;
         } else {
-          displayBadge = `${awayTeam} chấp ${hVal}`;
-          homeLabel = `${homeTeam} (+${hVal})`;
-          awayLabel = `${awayTeam} (-${hVal})`;
+          displayBadge = `${awayTeam} chấp ${formatLineValue(hVal)}`;
+          homeLabel = `${homeTeam} (+${formatLineValue(hVal)})`;
+          awayLabel = `${awayTeam} (-${formatLineValue(hVal)})`;
         }
 
         const homeOddNum = parseFloat(homeItem.odd);
@@ -647,7 +697,7 @@
 
         return {
           total,
-          displayBadge: `Tài Xỉu ${total}`,
+          displayBadge: `Tài Xỉu ${formatLineValue(total)}`,
           overOdd: overItem.odd,
           underOdd: underItem.odd,
           score: Math.abs(overOddNum - 1.95) + Math.abs(underOddNum - 1.95),
@@ -684,6 +734,7 @@
         let selectedBmName = sortedBookies[0]?.name || "Nhà cái";
         let ahBet = null;
         let ouBet = null;
+        let mwBet = null;
 
         for (const bm of sortedBookies) {
           const bets = bm.bets || [];
@@ -710,7 +761,19 @@
               ouBet = found;
             }
           }
-          if (ahBet && ouBet) break;
+          if (!mwBet) {
+            const found = bets.find(
+              (b) =>
+                b.id === 1 ||
+                (b.name &&
+                  (b.name.toLowerCase().includes("match winner") ||
+                    b.name.toLowerCase() === "1x2")),
+            );
+            if (found && found.values && found.values.length > 0) {
+              mwBet = found;
+            }
+          }
+          if (ahBet && ouBet && mwBet) break;
         }
 
         // 1. Phân tích Kèo Châu Á
@@ -783,10 +846,33 @@
           }
         }
 
+        // 3. Phân tích Kèo 1X2 (Châu Âu)
+        let mainMw = null;
+        if (mwBet && mwBet.values && mwBet.values.length > 0) {
+          const vals = mwBet.values;
+          const homeVal = vals.find(
+            (v) =>
+              v.value.toLowerCase() === "home" ||
+              v.value.toLowerCase() === homeTeamName.toLowerCase(),
+          );
+          const drawVal = vals.find((v) => v.value.toLowerCase() === "draw");
+          const awayVal = vals.find(
+            (v) =>
+              v.value.toLowerCase() === "away" ||
+              v.value.toLowerCase() === awayTeamName.toLowerCase(),
+          );
+          mainMw = {
+            homeOdd: homeVal?.odd || "-",
+            drawOdd: drawVal?.odd || "-",
+            awayOdd: awayVal?.odd || "-",
+          };
+        }
+
         return {
           bookmakerName: selectedBmName,
           asianHandicap: mainAh,
           overUnder: mainOu,
+          matchWinner: mainMw,
         };
       }
 
@@ -874,7 +960,7 @@
           ]);
 
           const filterLeagues = (list) =>
-            list.filter((m) => TARGET_LEAGUES.includes(m.league.id));
+            (list || []).filter((m) => TARGET_LEAGUES.includes(m.league.id));
 
           const filteredToday = filterLeagues(todayRaw);
           const filteredYesterday = filterLeagues(yesterdayRaw);
@@ -1026,1685 +1112,1685 @@
       let standingsCache = { 39: null, 140: null, 2: null };
 
       const PREMIER_LEAGUE_STANDINGS_FALLBACK = [
-  {
-    "rank": 1,
-    "team": {
-      "id": 65,
-      "name": "Manchester City FC",
-      "shortName": "Man City",
-      "logo": "https://crests.football-data.org/65.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 7,
-      "draw": 0,
-      "lose": 0,
-      "goals": {
-        "for": 19,
-        "against": 7
-      }
-    },
-    "goalsDiff": 12,
-    "points": 21,
-    "form": ""
-  },
-  {
-    "rank": 2,
-    "team": {
-      "id": 57,
-      "name": "Arsenal FC",
-      "shortName": "Arsenal",
-      "logo": "https://crests.football-data.org/57.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 6,
-      "draw": 0,
-      "lose": 1,
-      "goals": {
-        "for": 11,
-        "against": 5
-      }
-    },
-    "goalsDiff": 6,
-    "points": 18,
-    "form": ""
-  },
-  {
-    "rank": 3,
-    "team": {
-      "id": 397,
-      "name": "Brighton & Hove Albion FC",
-      "shortName": "Brighton Hove",
-      "logo": "https://crests.football-data.org/397.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 5,
-      "draw": 1,
-      "lose": 1,
-      "goals": {
-        "for": 23,
-        "against": 5
-      }
-    },
-    "goalsDiff": 18,
-    "points": 16,
-    "form": ""
-  },
-  {
-    "rank": 4,
-    "team": {
-      "id": 61,
-      "name": "Chelsea FC",
-      "shortName": "Chelsea",
-      "logo": "https://crests.football-data.org/61.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 4,
-      "draw": 1,
-      "lose": 2,
-      "goals": {
-        "for": 17,
-        "against": 13
-      }
-    },
-    "goalsDiff": 4,
-    "points": 13,
-    "form": ""
-  },
-  {
-    "rank": 5,
-    "team": {
-      "id": 64,
-      "name": "Liverpool FC",
-      "shortName": "Liverpool",
-      "logo": "https://crests.football-data.org/64.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 3,
-      "draw": 3,
-      "lose": 1,
-      "goals": {
-        "for": 9,
-        "against": 8
-      }
-    },
-    "goalsDiff": 1,
-    "points": 12,
-    "form": ""
-  },
-  {
-    "rank": 6,
-    "team": {
-      "id": 402,
-      "name": "Brentford FC",
-      "shortName": "Brentford",
-      "logo": "https://crests.football-data.org/402.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 4,
-      "lose": 1,
-      "goals": {
-        "for": 13,
-        "against": 8
-      }
-    },
-    "goalsDiff": 5,
-    "points": 10,
-    "form": ""
-  },
-  {
-    "rank": 7,
-    "team": {
-      "id": 341,
-      "name": "Leeds United FC",
-      "shortName": "Leeds United",
-      "logo": "https://crests.football-data.org/341.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 4,
-      "lose": 1,
-      "goals": {
-        "for": 9,
-        "against": 6
-      }
-    },
-    "goalsDiff": 3,
-    "points": 10,
-    "form": ""
-  },
-  {
-    "rank": 8,
-    "team": {
-      "id": 62,
-      "name": "Everton FC",
-      "shortName": "Everton",
-      "logo": "https://crests.football-data.org/62.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 4,
-      "lose": 1,
-      "goals": {
-        "for": 8,
-        "against": 7
-      }
-    },
-    "goalsDiff": 1,
-    "points": 10,
-    "form": ""
-  },
-  {
-    "rank": 9,
-    "team": {
-      "id": 322,
-      "name": "Hull City AFC",
-      "shortName": "Hull City",
-      "logo": "https://crests.football-data.org/322.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 3,
-      "lose": 2,
-      "goals": {
-        "for": 8,
-        "against": 7
-      }
-    },
-    "goalsDiff": 1,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 10,
-    "team": {
-      "id": 349,
-      "name": "Ipswich Town FC",
-      "shortName": "Ipswich Town",
-      "logo": "https://crests.football-data.org/349.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 3,
-      "draw": 0,
-      "lose": 4,
-      "goals": {
-        "for": 11,
-        "against": 15
-      }
-    },
-    "goalsDiff": -4,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 11,
-    "team": {
-      "id": 67,
-      "name": "Newcastle United FC",
-      "shortName": "Newcastle",
-      "logo": "https://crests.football-data.org/67.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 2,
-      "lose": 3,
-      "goals": {
-        "for": 10,
-        "against": 14
-      }
-    },
-    "goalsDiff": -4,
-    "points": 8,
-    "form": ""
-  },
-  {
-    "rank": 12,
-    "team": {
-      "id": 58,
-      "name": "Aston Villa FC",
-      "shortName": "Aston Villa",
-      "logo": "https://crests.football-data.org/58.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 2,
-      "lose": 3,
-      "goals": {
-        "for": 7,
-        "against": 11
-      }
-    },
-    "goalsDiff": -4,
-    "points": 8,
-    "form": ""
-  },
-  {
-    "rank": 13,
-    "team": {
-      "id": 66,
-      "name": "Manchester United FC",
-      "shortName": "Man United",
-      "logo": "https://crests.football-data.org/66.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 1,
-      "draw": 4,
-      "lose": 2,
-      "goals": {
-        "for": 10,
-        "against": 10
-      }
-    },
-    "goalsDiff": 0,
-    "points": 7,
-    "form": ""
-  },
-  {
-    "rank": 14,
-    "team": {
-      "id": 354,
-      "name": "Crystal Palace FC",
-      "shortName": "Crystal Palace",
-      "logo": "https://crests.football-data.org/354.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 1,
-      "lose": 4,
-      "goals": {
-        "for": 9,
-        "against": 17
-      }
-    },
-    "goalsDiff": -8,
-    "points": 7,
-    "form": ""
-  },
-  {
-    "rank": 15,
-    "team": {
-      "id": 1044,
-      "name": "AFC Bournemouth",
-      "shortName": "Bournemouth",
-      "logo": "https://crests.football-data.org/bournemouth.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 1,
-      "draw": 3,
-      "lose": 3,
-      "goals": {
-        "for": 9,
-        "against": 13
-      }
-    },
-    "goalsDiff": -4,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 16,
-    "team": {
-      "id": 73,
-      "name": "Tottenham Hotspur FC",
-      "shortName": "Tottenham",
-      "logo": "https://crests.football-data.org/73.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 1,
-      "draw": 3,
-      "lose": 3,
-      "goals": {
-        "for": 6,
-        "against": 10
-      }
-    },
-    "goalsDiff": -4,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 17,
-    "team": {
-      "id": 1076,
-      "name": "Coventry City FC",
-      "shortName": "Coventry City",
-      "logo": "https://crests.football-data.org/1076.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 2,
-      "draw": 0,
-      "lose": 5,
-      "goals": {
-        "for": 6,
-        "against": 14
-      }
-    },
-    "goalsDiff": -8,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 18,
-    "team": {
-      "id": 63,
-      "name": "Fulham FC",
-      "shortName": "Fulham",
-      "logo": "https://crests.football-data.org/63.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 1,
-      "draw": 2,
-      "lose": 4,
-      "goals": {
-        "for": 7,
-        "against": 10
-      }
-    },
-    "goalsDiff": -3,
-    "points": 5,
-    "form": ""
-  },
-  {
-    "rank": 19,
-    "team": {
-      "id": 351,
-      "name": "Nottingham Forest FC",
-      "shortName": "Nottingham",
-      "logo": "https://crests.football-data.org/351.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 1,
-      "draw": 2,
-      "lose": 4,
-      "goals": {
-        "for": 5,
-        "against": 9
-      }
-    },
-    "goalsDiff": -4,
-    "points": 5,
-    "form": ""
-  },
-  {
-    "rank": 20,
-    "team": {
-      "id": 71,
-      "name": "Sunderland AFC",
-      "shortName": "Sunderland",
-      "logo": "https://crests.football-data.org/71.png"
-    },
-    "all": {
-      "played": 7,
-      "win": 1,
-      "draw": 1,
-      "lose": 5,
-      "goals": {
-        "for": 6,
-        "against": 14
-      }
-    },
-    "goalsDiff": -8,
-    "points": 4,
-    "form": ""
-  }
-];
+        {
+          rank: 1,
+          team: {
+            id: 65,
+            name: "Manchester City FC",
+            shortName: "Man City",
+            logo: "https://crests.football-data.org/65.png",
+          },
+          all: {
+            played: 7,
+            win: 7,
+            draw: 0,
+            lose: 0,
+            goals: {
+              for: 19,
+              against: 7,
+            },
+          },
+          goalsDiff: 12,
+          points: 21,
+          form: "",
+        },
+        {
+          rank: 2,
+          team: {
+            id: 57,
+            name: "Arsenal FC",
+            shortName: "Arsenal",
+            logo: "https://crests.football-data.org/57.png",
+          },
+          all: {
+            played: 7,
+            win: 6,
+            draw: 0,
+            lose: 1,
+            goals: {
+              for: 11,
+              against: 5,
+            },
+          },
+          goalsDiff: 6,
+          points: 18,
+          form: "",
+        },
+        {
+          rank: 3,
+          team: {
+            id: 397,
+            name: "Brighton & Hove Albion FC",
+            shortName: "Brighton Hove",
+            logo: "https://crests.football-data.org/397.png",
+          },
+          all: {
+            played: 7,
+            win: 5,
+            draw: 1,
+            lose: 1,
+            goals: {
+              for: 23,
+              against: 5,
+            },
+          },
+          goalsDiff: 18,
+          points: 16,
+          form: "",
+        },
+        {
+          rank: 4,
+          team: {
+            id: 61,
+            name: "Chelsea FC",
+            shortName: "Chelsea",
+            logo: "https://crests.football-data.org/61.png",
+          },
+          all: {
+            played: 7,
+            win: 4,
+            draw: 1,
+            lose: 2,
+            goals: {
+              for: 17,
+              against: 13,
+            },
+          },
+          goalsDiff: 4,
+          points: 13,
+          form: "",
+        },
+        {
+          rank: 5,
+          team: {
+            id: 64,
+            name: "Liverpool FC",
+            shortName: "Liverpool",
+            logo: "https://crests.football-data.org/64.png",
+          },
+          all: {
+            played: 7,
+            win: 3,
+            draw: 3,
+            lose: 1,
+            goals: {
+              for: 9,
+              against: 8,
+            },
+          },
+          goalsDiff: 1,
+          points: 12,
+          form: "",
+        },
+        {
+          rank: 6,
+          team: {
+            id: 402,
+            name: "Brentford FC",
+            shortName: "Brentford",
+            logo: "https://crests.football-data.org/402.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 4,
+            lose: 1,
+            goals: {
+              for: 13,
+              against: 8,
+            },
+          },
+          goalsDiff: 5,
+          points: 10,
+          form: "",
+        },
+        {
+          rank: 7,
+          team: {
+            id: 341,
+            name: "Leeds United FC",
+            shortName: "Leeds United",
+            logo: "https://crests.football-data.org/341.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 4,
+            lose: 1,
+            goals: {
+              for: 9,
+              against: 6,
+            },
+          },
+          goalsDiff: 3,
+          points: 10,
+          form: "",
+        },
+        {
+          rank: 8,
+          team: {
+            id: 62,
+            name: "Everton FC",
+            shortName: "Everton",
+            logo: "https://crests.football-data.org/62.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 4,
+            lose: 1,
+            goals: {
+              for: 8,
+              against: 7,
+            },
+          },
+          goalsDiff: 1,
+          points: 10,
+          form: "",
+        },
+        {
+          rank: 9,
+          team: {
+            id: 322,
+            name: "Hull City AFC",
+            shortName: "Hull City",
+            logo: "https://crests.football-data.org/322.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 3,
+            lose: 2,
+            goals: {
+              for: 8,
+              against: 7,
+            },
+          },
+          goalsDiff: 1,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 10,
+          team: {
+            id: 349,
+            name: "Ipswich Town FC",
+            shortName: "Ipswich Town",
+            logo: "https://crests.football-data.org/349.png",
+          },
+          all: {
+            played: 7,
+            win: 3,
+            draw: 0,
+            lose: 4,
+            goals: {
+              for: 11,
+              against: 15,
+            },
+          },
+          goalsDiff: -4,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 11,
+          team: {
+            id: 67,
+            name: "Newcastle United FC",
+            shortName: "Newcastle",
+            logo: "https://crests.football-data.org/67.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 2,
+            lose: 3,
+            goals: {
+              for: 10,
+              against: 14,
+            },
+          },
+          goalsDiff: -4,
+          points: 8,
+          form: "",
+        },
+        {
+          rank: 12,
+          team: {
+            id: 58,
+            name: "Aston Villa FC",
+            shortName: "Aston Villa",
+            logo: "https://crests.football-data.org/58.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 2,
+            lose: 3,
+            goals: {
+              for: 7,
+              against: 11,
+            },
+          },
+          goalsDiff: -4,
+          points: 8,
+          form: "",
+        },
+        {
+          rank: 13,
+          team: {
+            id: 66,
+            name: "Manchester United FC",
+            shortName: "Man United",
+            logo: "https://crests.football-data.org/66.png",
+          },
+          all: {
+            played: 7,
+            win: 1,
+            draw: 4,
+            lose: 2,
+            goals: {
+              for: 10,
+              against: 10,
+            },
+          },
+          goalsDiff: 0,
+          points: 7,
+          form: "",
+        },
+        {
+          rank: 14,
+          team: {
+            id: 354,
+            name: "Crystal Palace FC",
+            shortName: "Crystal Palace",
+            logo: "https://crests.football-data.org/354.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 1,
+            lose: 4,
+            goals: {
+              for: 9,
+              against: 17,
+            },
+          },
+          goalsDiff: -8,
+          points: 7,
+          form: "",
+        },
+        {
+          rank: 15,
+          team: {
+            id: 1044,
+            name: "AFC Bournemouth",
+            shortName: "Bournemouth",
+            logo: "https://crests.football-data.org/bournemouth.png",
+          },
+          all: {
+            played: 7,
+            win: 1,
+            draw: 3,
+            lose: 3,
+            goals: {
+              for: 9,
+              against: 13,
+            },
+          },
+          goalsDiff: -4,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 16,
+          team: {
+            id: 73,
+            name: "Tottenham Hotspur FC",
+            shortName: "Tottenham",
+            logo: "https://crests.football-data.org/73.png",
+          },
+          all: {
+            played: 7,
+            win: 1,
+            draw: 3,
+            lose: 3,
+            goals: {
+              for: 6,
+              against: 10,
+            },
+          },
+          goalsDiff: -4,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 17,
+          team: {
+            id: 1076,
+            name: "Coventry City FC",
+            shortName: "Coventry City",
+            logo: "https://crests.football-data.org/1076.png",
+          },
+          all: {
+            played: 7,
+            win: 2,
+            draw: 0,
+            lose: 5,
+            goals: {
+              for: 6,
+              against: 14,
+            },
+          },
+          goalsDiff: -8,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 18,
+          team: {
+            id: 63,
+            name: "Fulham FC",
+            shortName: "Fulham",
+            logo: "https://crests.football-data.org/63.png",
+          },
+          all: {
+            played: 7,
+            win: 1,
+            draw: 2,
+            lose: 4,
+            goals: {
+              for: 7,
+              against: 10,
+            },
+          },
+          goalsDiff: -3,
+          points: 5,
+          form: "",
+        },
+        {
+          rank: 19,
+          team: {
+            id: 351,
+            name: "Nottingham Forest FC",
+            shortName: "Nottingham",
+            logo: "https://crests.football-data.org/351.png",
+          },
+          all: {
+            played: 7,
+            win: 1,
+            draw: 2,
+            lose: 4,
+            goals: {
+              for: 5,
+              against: 9,
+            },
+          },
+          goalsDiff: -4,
+          points: 5,
+          form: "",
+        },
+        {
+          rank: 20,
+          team: {
+            id: 71,
+            name: "Sunderland AFC",
+            shortName: "Sunderland",
+            logo: "https://crests.football-data.org/71.png",
+          },
+          all: {
+            played: 7,
+            win: 1,
+            draw: 1,
+            lose: 5,
+            goals: {
+              for: 6,
+              against: 14,
+            },
+          },
+          goalsDiff: -8,
+          points: 4,
+          form: "",
+        },
+      ];
 
       const LA_LIGA_STANDINGS_FALLBACK = [
-  {
-    "rank": 1,
-    "team": {
-      "id": 81,
-      "name": "FC Barcelona",
-      "shortName": "Barça",
-      "logo": "https://crests.football-data.org/81.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 9,
-      "draw": 0,
-      "lose": 0,
-      "goals": {
-        "for": 39,
-        "against": 9
-      }
-    },
-    "goalsDiff": 30,
-    "points": 27,
-    "form": ""
-  },
-  {
-    "rank": 2,
-    "team": {
-      "id": 78,
-      "name": "Club Atlético de Madrid",
-      "shortName": "Atleti",
-      "logo": "https://crests.football-data.org/78.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 7,
-      "draw": 1,
-      "lose": 1,
-      "goals": {
-        "for": 19,
-        "against": 8
-      }
-    },
-    "goalsDiff": 11,
-    "points": 22,
-    "form": ""
-  },
-  {
-    "rank": 3,
-    "team": {
-      "id": 86,
-      "name": "Real Madrid CF",
-      "shortName": "Real Madrid",
-      "logo": "https://crests.football-data.org/86.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 7,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 23,
-        "against": 9
-      }
-    },
-    "goalsDiff": 14,
-    "points": 21,
-    "form": ""
-  },
-  {
-    "rank": 4,
-    "team": {
-      "id": 90,
-      "name": "Real Betis Balompié",
-      "shortName": "Real Betis",
-      "logo": "https://crests.football-data.org/90.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 6,
-      "draw": 1,
-      "lose": 2,
-      "goals": {
-        "for": 16,
-        "against": 14
-      }
-    },
-    "goalsDiff": 2,
-    "points": 19,
-    "form": ""
-  },
-  {
-    "rank": 5,
-    "team": {
-      "id": 92,
-      "name": "Real Sociedad de Fútbol",
-      "shortName": "Real Sociedad",
-      "logo": "https://crests.football-data.org/92.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 5,
-      "draw": 1,
-      "lose": 3,
-      "goals": {
-        "for": 17,
-        "against": 17
-      }
-    },
-    "goalsDiff": 0,
-    "points": 16,
-    "form": ""
-  },
-  {
-    "rank": 6,
-    "team": {
-      "id": 559,
-      "name": "Sevilla FC",
-      "shortName": "Sevilla FC",
-      "logo": "https://crests.football-data.org/559.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 4,
-      "draw": 2,
-      "lose": 3,
-      "goals": {
-        "for": 14,
-        "against": 16
-      }
-    },
-    "goalsDiff": -2,
-    "points": 14,
-    "form": ""
-  },
-  {
-    "rank": 7,
-    "team": {
-      "id": 263,
-      "name": "Deportivo Alavés",
-      "shortName": "Alavés",
-      "logo": "https://crests.football-data.org/263.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 3,
-      "draw": 2,
-      "lose": 4,
-      "goals": {
-        "for": 13,
-        "against": 10
-      }
-    },
-    "goalsDiff": 3,
-    "points": 11,
-    "form": ""
-  },
-  {
-    "rank": 8,
-    "team": {
-      "id": 558,
-      "name": "RC Celta de Vigo",
-      "shortName": "Celta",
-      "logo": "https://crests.football-data.org/558.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 2,
-      "draw": 5,
-      "lose": 2,
-      "goals": {
-        "for": 10,
-        "against": 7
-      }
-    },
-    "goalsDiff": 3,
-    "points": 11,
-    "form": ""
-  },
-  {
-    "rank": 9,
-    "team": {
-      "id": 560,
-      "name": "RC Deportivo La Coruña",
-      "shortName": "Deportivo",
-      "logo": "https://crests.football-data.org/560.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 2,
-      "draw": 5,
-      "lose": 2,
-      "goals": {
-        "for": 13,
-        "against": 12
-      }
-    },
-    "goalsDiff": 1,
-    "points": 11,
-    "form": ""
-  },
-  {
-    "rank": 10,
-    "team": {
-      "id": 79,
-      "name": "CA Osasuna",
-      "shortName": "Osasuna",
-      "logo": "https://crests.football-data.org/79.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 3,
-      "draw": 2,
-      "lose": 4,
-      "goals": {
-        "for": 10,
-        "against": 18
-      }
-    },
-    "goalsDiff": -8,
-    "points": 11,
-    "form": ""
-  },
-  {
-    "rank": 11,
-    "team": {
-      "id": 88,
-      "name": "Levante UD",
-      "shortName": "Levante",
-      "logo": "https://crests.football-data.org/88.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 2,
-      "draw": 4,
-      "lose": 3,
-      "goals": {
-        "for": 15,
-        "against": 17
-      }
-    },
-    "goalsDiff": -2,
-    "points": 10,
-    "form": ""
-  },
-  {
-    "rank": 12,
-    "team": {
-      "id": 94,
-      "name": "Villarreal CF",
-      "shortName": "Villarreal",
-      "logo": "https://crests.football-data.org/94.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 2,
-      "draw": 3,
-      "lose": 4,
-      "goals": {
-        "for": 13,
-        "against": 13
-      }
-    },
-    "goalsDiff": 0,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 13,
-    "team": {
-      "id": 77,
-      "name": "Athletic Club",
-      "shortName": "Athletic",
-      "logo": "https://crests.football-data.org/77.png"
-    },
-    "all": {
-      "played": 8,
-      "win": 2,
-      "draw": 3,
-      "lose": 3,
-      "goals": {
-        "for": 8,
-        "against": 9
-      }
-    },
-    "goalsDiff": -1,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 14,
-    "team": {
-      "id": 87,
-      "name": "Rayo Vallecano de Madrid",
-      "shortName": "Rayo Vallecano",
-      "logo": "https://crests.football-data.org/87.png"
-    },
-    "all": {
-      "played": 8,
-      "win": 2,
-      "draw": 3,
-      "lose": 3,
-      "goals": {
-        "for": 12,
-        "against": 17
-      }
-    },
-    "goalsDiff": -5,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 15,
-    "team": {
-      "id": 82,
-      "name": "Getafe CF",
-      "shortName": "Getafe",
-      "logo": "https://crests.football-data.org/82.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 2,
-      "draw": 3,
-      "lose": 4,
-      "goals": {
-        "for": 5,
-        "against": 11
-      }
-    },
-    "goalsDiff": -6,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 16,
-    "team": {
-      "id": 80,
-      "name": "RCD Espanyol de Barcelona",
-      "shortName": "Espanyol",
-      "logo": "https://crests.football-data.org/80.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 2,
-      "draw": 2,
-      "lose": 5,
-      "goals": {
-        "for": 11,
-        "against": 12
-      }
-    },
-    "goalsDiff": -1,
-    "points": 8,
-    "form": ""
-  },
-  {
-    "rank": 17,
-    "team": {
-      "id": 5335,
-      "name": "Real Racing Club de Santander",
-      "shortName": "Santander",
-      "logo": "https://crests.football-data.org/5335.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 2,
-      "draw": 2,
-      "lose": 5,
-      "goals": {
-        "for": 13,
-        "against": 25
-      }
-    },
-    "goalsDiff": -12,
-    "points": 8,
-    "form": ""
-  },
-  {
-    "rank": 18,
-    "team": {
-      "id": 285,
-      "name": "Elche CF",
-      "shortName": "Elche",
-      "logo": "https://crests.football-data.org/285.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 1,
-      "draw": 4,
-      "lose": 4,
-      "goals": {
-        "for": 11,
-        "against": 17
-      }
-    },
-    "goalsDiff": -6,
-    "points": 7,
-    "form": ""
-  },
-  {
-    "rank": 19,
-    "team": {
-      "id": 95,
-      "name": "Valencia CF",
-      "shortName": "Valencia",
-      "logo": "https://crests.football-data.org/95.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 1,
-      "draw": 3,
-      "lose": 5,
-      "goals": {
-        "for": 6,
-        "against": 15
-      }
-    },
-    "goalsDiff": -9,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 20,
-    "team": {
-      "id": 84,
-      "name": "Málaga CF",
-      "shortName": "Málaga",
-      "logo": "https://crests.football-data.org/84.png"
-    },
-    "all": {
-      "played": 9,
-      "win": 0,
-      "draw": 4,
-      "lose": 5,
-      "goals": {
-        "for": 6,
-        "against": 18
-      }
-    },
-    "goalsDiff": -12,
-    "points": 4,
-    "form": ""
-  }
-];
+        {
+          rank: 1,
+          team: {
+            id: 81,
+            name: "FC Barcelona",
+            shortName: "Barça",
+            logo: "https://crests.football-data.org/81.png",
+          },
+          all: {
+            played: 9,
+            win: 9,
+            draw: 0,
+            lose: 0,
+            goals: {
+              for: 39,
+              against: 9,
+            },
+          },
+          goalsDiff: 30,
+          points: 27,
+          form: "",
+        },
+        {
+          rank: 2,
+          team: {
+            id: 78,
+            name: "Club Atlético de Madrid",
+            shortName: "Atleti",
+            logo: "https://crests.football-data.org/78.png",
+          },
+          all: {
+            played: 9,
+            win: 7,
+            draw: 1,
+            lose: 1,
+            goals: {
+              for: 19,
+              against: 8,
+            },
+          },
+          goalsDiff: 11,
+          points: 22,
+          form: "",
+        },
+        {
+          rank: 3,
+          team: {
+            id: 86,
+            name: "Real Madrid CF",
+            shortName: "Real Madrid",
+            logo: "https://crests.football-data.org/86.png",
+          },
+          all: {
+            played: 9,
+            win: 7,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 23,
+              against: 9,
+            },
+          },
+          goalsDiff: 14,
+          points: 21,
+          form: "",
+        },
+        {
+          rank: 4,
+          team: {
+            id: 90,
+            name: "Real Betis Balompié",
+            shortName: "Real Betis",
+            logo: "https://crests.football-data.org/90.png",
+          },
+          all: {
+            played: 9,
+            win: 6,
+            draw: 1,
+            lose: 2,
+            goals: {
+              for: 16,
+              against: 14,
+            },
+          },
+          goalsDiff: 2,
+          points: 19,
+          form: "",
+        },
+        {
+          rank: 5,
+          team: {
+            id: 92,
+            name: "Real Sociedad de Fútbol",
+            shortName: "Real Sociedad",
+            logo: "https://crests.football-data.org/92.png",
+          },
+          all: {
+            played: 9,
+            win: 5,
+            draw: 1,
+            lose: 3,
+            goals: {
+              for: 17,
+              against: 17,
+            },
+          },
+          goalsDiff: 0,
+          points: 16,
+          form: "",
+        },
+        {
+          rank: 6,
+          team: {
+            id: 559,
+            name: "Sevilla FC",
+            shortName: "Sevilla FC",
+            logo: "https://crests.football-data.org/559.png",
+          },
+          all: {
+            played: 9,
+            win: 4,
+            draw: 2,
+            lose: 3,
+            goals: {
+              for: 14,
+              against: 16,
+            },
+          },
+          goalsDiff: -2,
+          points: 14,
+          form: "",
+        },
+        {
+          rank: 7,
+          team: {
+            id: 263,
+            name: "Deportivo Alavés",
+            shortName: "Alavés",
+            logo: "https://crests.football-data.org/263.png",
+          },
+          all: {
+            played: 9,
+            win: 3,
+            draw: 2,
+            lose: 4,
+            goals: {
+              for: 13,
+              against: 10,
+            },
+          },
+          goalsDiff: 3,
+          points: 11,
+          form: "",
+        },
+        {
+          rank: 8,
+          team: {
+            id: 558,
+            name: "RC Celta de Vigo",
+            shortName: "Celta",
+            logo: "https://crests.football-data.org/558.png",
+          },
+          all: {
+            played: 9,
+            win: 2,
+            draw: 5,
+            lose: 2,
+            goals: {
+              for: 10,
+              against: 7,
+            },
+          },
+          goalsDiff: 3,
+          points: 11,
+          form: "",
+        },
+        {
+          rank: 9,
+          team: {
+            id: 560,
+            name: "RC Deportivo La Coruña",
+            shortName: "Deportivo",
+            logo: "https://crests.football-data.org/560.png",
+          },
+          all: {
+            played: 9,
+            win: 2,
+            draw: 5,
+            lose: 2,
+            goals: {
+              for: 13,
+              against: 12,
+            },
+          },
+          goalsDiff: 1,
+          points: 11,
+          form: "",
+        },
+        {
+          rank: 10,
+          team: {
+            id: 79,
+            name: "CA Osasuna",
+            shortName: "Osasuna",
+            logo: "https://crests.football-data.org/79.png",
+          },
+          all: {
+            played: 9,
+            win: 3,
+            draw: 2,
+            lose: 4,
+            goals: {
+              for: 10,
+              against: 18,
+            },
+          },
+          goalsDiff: -8,
+          points: 11,
+          form: "",
+        },
+        {
+          rank: 11,
+          team: {
+            id: 88,
+            name: "Levante UD",
+            shortName: "Levante",
+            logo: "https://crests.football-data.org/88.png",
+          },
+          all: {
+            played: 9,
+            win: 2,
+            draw: 4,
+            lose: 3,
+            goals: {
+              for: 15,
+              against: 17,
+            },
+          },
+          goalsDiff: -2,
+          points: 10,
+          form: "",
+        },
+        {
+          rank: 12,
+          team: {
+            id: 94,
+            name: "Villarreal CF",
+            shortName: "Villarreal",
+            logo: "https://crests.football-data.org/94.png",
+          },
+          all: {
+            played: 9,
+            win: 2,
+            draw: 3,
+            lose: 4,
+            goals: {
+              for: 13,
+              against: 13,
+            },
+          },
+          goalsDiff: 0,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 13,
+          team: {
+            id: 77,
+            name: "Athletic Club",
+            shortName: "Athletic",
+            logo: "https://crests.football-data.org/77.png",
+          },
+          all: {
+            played: 8,
+            win: 2,
+            draw: 3,
+            lose: 3,
+            goals: {
+              for: 8,
+              against: 9,
+            },
+          },
+          goalsDiff: -1,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 14,
+          team: {
+            id: 87,
+            name: "Rayo Vallecano de Madrid",
+            shortName: "Rayo Vallecano",
+            logo: "https://crests.football-data.org/87.png",
+          },
+          all: {
+            played: 8,
+            win: 2,
+            draw: 3,
+            lose: 3,
+            goals: {
+              for: 12,
+              against: 17,
+            },
+          },
+          goalsDiff: -5,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 15,
+          team: {
+            id: 82,
+            name: "Getafe CF",
+            shortName: "Getafe",
+            logo: "https://crests.football-data.org/82.png",
+          },
+          all: {
+            played: 9,
+            win: 2,
+            draw: 3,
+            lose: 4,
+            goals: {
+              for: 5,
+              against: 11,
+            },
+          },
+          goalsDiff: -6,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 16,
+          team: {
+            id: 80,
+            name: "RCD Espanyol de Barcelona",
+            shortName: "Espanyol",
+            logo: "https://crests.football-data.org/80.png",
+          },
+          all: {
+            played: 9,
+            win: 2,
+            draw: 2,
+            lose: 5,
+            goals: {
+              for: 11,
+              against: 12,
+            },
+          },
+          goalsDiff: -1,
+          points: 8,
+          form: "",
+        },
+        {
+          rank: 17,
+          team: {
+            id: 5335,
+            name: "Real Racing Club de Santander",
+            shortName: "Santander",
+            logo: "https://crests.football-data.org/5335.png",
+          },
+          all: {
+            played: 9,
+            win: 2,
+            draw: 2,
+            lose: 5,
+            goals: {
+              for: 13,
+              against: 25,
+            },
+          },
+          goalsDiff: -12,
+          points: 8,
+          form: "",
+        },
+        {
+          rank: 18,
+          team: {
+            id: 285,
+            name: "Elche CF",
+            shortName: "Elche",
+            logo: "https://crests.football-data.org/285.png",
+          },
+          all: {
+            played: 9,
+            win: 1,
+            draw: 4,
+            lose: 4,
+            goals: {
+              for: 11,
+              against: 17,
+            },
+          },
+          goalsDiff: -6,
+          points: 7,
+          form: "",
+        },
+        {
+          rank: 19,
+          team: {
+            id: 95,
+            name: "Valencia CF",
+            shortName: "Valencia",
+            logo: "https://crests.football-data.org/95.png",
+          },
+          all: {
+            played: 9,
+            win: 1,
+            draw: 3,
+            lose: 5,
+            goals: {
+              for: 6,
+              against: 15,
+            },
+          },
+          goalsDiff: -9,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 20,
+          team: {
+            id: 84,
+            name: "Málaga CF",
+            shortName: "Málaga",
+            logo: "https://crests.football-data.org/84.png",
+          },
+          all: {
+            played: 9,
+            win: 0,
+            draw: 4,
+            lose: 5,
+            goals: {
+              for: 6,
+              against: 18,
+            },
+          },
+          goalsDiff: -12,
+          points: 4,
+          form: "",
+        },
+      ];
 
       const UCL_STANDINGS_FALLBACK = [
-  {
-    "rank": 1,
-    "team": {
-      "id": 524,
-      "name": "Paris Saint-Germain FC",
-      "shortName": "PSG",
-      "logo": "https://crests.football-data.org/524.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 3,
-      "draw": 0,
-      "lose": 0,
-      "goals": {
-        "for": 14,
-        "against": 5
-      }
-    },
-    "goalsDiff": 9,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 2,
-    "team": {
-      "id": 58,
-      "name": "Aston Villa FC",
-      "shortName": "Aston Villa",
-      "logo": "https://crests.football-data.org/58.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 3,
-      "draw": 0,
-      "lose": 0,
-      "goals": {
-        "for": 12,
-        "against": 3
-      }
-    },
-    "goalsDiff": 9,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 3,
-    "team": {
-      "id": 64,
-      "name": "Liverpool FC",
-      "shortName": "Liverpool",
-      "logo": "https://crests.football-data.org/64.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 3,
-      "draw": 0,
-      "lose": 0,
-      "goals": {
-        "for": 12,
-        "against": 7
-      }
-    },
-    "goalsDiff": 5,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 4,
-    "team": {
-      "id": 86,
-      "name": "Real Madrid CF",
-      "shortName": "Real Madrid",
-      "logo": "https://crests.football-data.org/86.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 3,
-      "draw": 0,
-      "lose": 0,
-      "goals": {
-        "for": 10,
-        "against": 5
-      }
-    },
-    "goalsDiff": 5,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 5,
-    "team": {
-      "id": 90,
-      "name": "Real Betis Balompié",
-      "shortName": "Real Betis",
-      "logo": "https://crests.football-data.org/90.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 3,
-      "draw": 0,
-      "lose": 0,
-      "goals": {
-        "for": 7,
-        "against": 4
-      }
-    },
-    "goalsDiff": 3,
-    "points": 9,
-    "form": ""
-  },
-  {
-    "rank": 6,
-    "team": {
-      "id": 10,
-      "name": "VfB Stuttgart",
-      "shortName": "Stuttgart",
-      "logo": "https://crests.football-data.org/10.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 1,
-      "lose": 0,
-      "goals": {
-        "for": 7,
-        "against": 2
-      }
-    },
-    "goalsDiff": 5,
-    "points": 7,
-    "form": ""
-  },
-  {
-    "rank": 7,
-    "team": {
-      "id": 57,
-      "name": "Arsenal FC",
-      "shortName": "Arsenal",
-      "logo": "https://crests.football-data.org/57.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 1,
-      "lose": 0,
-      "goals": {
-        "for": 6,
-        "against": 2
-      }
-    },
-    "goalsDiff": 4,
-    "points": 7,
-    "form": ""
-  },
-  {
-    "rank": 8,
-    "team": {
-      "id": 81,
-      "name": "FC Barcelona",
-      "shortName": "Barça",
-      "logo": "https://crests.football-data.org/81.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 0,
-      "lose": 1,
-      "goals": {
-        "for": 11,
-        "against": 6
-      }
-    },
-    "goalsDiff": 5,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 9,
-    "team": {
-      "id": 7397,
-      "name": "Como 1907",
-      "shortName": "Como 1907",
-      "logo": "https://crests.football-data.org/7397.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 0,
-      "lose": 1,
-      "goals": {
-        "for": 10,
-        "against": 5
-      }
-    },
-    "goalsDiff": 5,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 10,
-    "team": {
-      "id": 65,
-      "name": "Manchester City FC",
-      "shortName": "Man City",
-      "logo": "https://crests.football-data.org/65.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 0,
-      "lose": 1,
-      "goals": {
-        "for": 9,
-        "against": 5
-      }
-    },
-    "goalsDiff": 4,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 11,
-    "team": {
-      "id": 851,
-      "name": "Club Brugge KV",
-      "shortName": "Club Brugge",
-      "logo": "https://crests.football-data.org/851.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 0,
-      "lose": 1,
-      "goals": {
-        "for": 9,
-        "against": 6
-      }
-    },
-    "goalsDiff": 3,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 12,
-    "team": {
-      "id": 498,
-      "name": "Sporting Clube de Portugal",
-      "shortName": "Sporting CP",
-      "logo": "https://crests.football-data.org/498.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 0,
-      "lose": 1,
-      "goals": {
-        "for": 7,
-        "against": 4
-      }
-    },
-    "goalsDiff": 3,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 13,
-    "team": {
-      "id": 4,
-      "name": "Borussia Dortmund",
-      "shortName": "Dortmund",
-      "logo": "https://crests.football-data.org/4.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 2,
-      "draw": 0,
-      "lose": 1,
-      "goals": {
-        "for": 5,
-        "against": 4
-      }
-    },
-    "goalsDiff": 1,
-    "points": 6,
-    "form": ""
-  },
-  {
-    "rank": 14,
-    "team": {
-      "id": 5,
-      "name": "FC Bayern München",
-      "shortName": "Bayern",
-      "logo": "https://crests.football-data.org/5.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 2,
-      "lose": 0,
-      "goals": {
-        "for": 10,
-        "against": 5
-      }
-    },
-    "goalsDiff": 5,
-    "points": 5,
-    "form": ""
-  },
-  {
-    "rank": 15,
-    "team": {
-      "id": 100,
-      "name": "AS Roma",
-      "shortName": "Roma",
-      "logo": "https://crests.football-data.org/100.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 1,
-      "lose": 1,
-      "goals": {
-        "for": 8,
-        "against": 5
-      }
-    },
-    "goalsDiff": 3,
-    "points": 4,
-    "form": ""
-  },
-  {
-    "rank": 16,
-    "team": {
-      "id": 78,
-      "name": "Club Atlético de Madrid",
-      "shortName": "Atleti",
-      "logo": "https://crests.football-data.org/78.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 1,
-      "lose": 1,
-      "goals": {
-        "for": 4,
-        "against": 3
-      }
-    },
-    "goalsDiff": 1,
-    "points": 4,
-    "form": ""
-  },
-  {
-    "rank": 17,
-    "team": {
-      "id": 1887,
-      "name": "FK Shakhtar Donetsk",
-      "shortName": "Shaktar",
-      "logo": "https://crests.football-data.org/1887.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 1,
-      "lose": 1,
-      "goals": {
-        "for": 4,
-        "against": 3
-      }
-    },
-    "goalsDiff": 1,
-    "points": 4,
-    "form": ""
-  },
-  {
-    "rank": 18,
-    "team": {
-      "id": 674,
-      "name": "PSV",
-      "shortName": "PSV",
-      "logo": "https://crests.football-data.org/674.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 1,
-      "lose": 1,
-      "goals": {
-        "for": 2,
-        "against": 2
-      }
-    },
-    "goalsDiff": 0,
-    "points": 4,
-    "form": ""
-  },
-  {
-    "rank": 19,
-    "team": {
-      "id": 94,
-      "name": "Villarreal CF",
-      "shortName": "Villarreal",
-      "logo": "https://crests.football-data.org/94.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 8,
-        "against": 8
-      }
-    },
-    "goalsDiff": 0,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 20,
-    "team": {
-      "id": 108,
-      "name": "FC Internazionale Milano",
-      "shortName": "Inter",
-      "logo": "https://crests.football-data.org/108.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 5,
-        "against": 6
-      }
-    },
-    "goalsDiff": -1,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 20,
-    "team": {
-      "id": 66,
-      "name": "Manchester United FC",
-      "shortName": "Man United",
-      "logo": "https://crests.football-data.org/66.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 5,
-        "against": 6
-      }
-    },
-    "goalsDiff": -1,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 22,
-    "team": {
-      "id": 113,
-      "name": "SSC Napoli",
-      "shortName": "Napoli",
-      "logo": "https://crests.football-data.org/113.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 5,
-        "against": 7
-      }
-    },
-    "goalsDiff": -2,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 23,
-    "team": {
-      "id": 610,
-      "name": "Galatasaray SK",
-      "shortName": "Galatasaray",
-      "logo": "https://crests.football-data.org/610.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 6,
-        "against": 9
-      }
-    },
-    "goalsDiff": -3,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 24,
-    "team": {
-      "id": 2016,
-      "name": "LASK Linz",
-      "shortName": "LASK",
-      "logo": "https://crests.football-data.org/2016.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 6,
-        "against": 9
-      }
-    },
-    "goalsDiff": -3,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 25,
-    "team": {
-      "id": 10233,
-      "name": "Sabah FK",
-      "shortName": "Sabah FK",
-      "logo": "https://crests.football-data.org/10233.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 3,
-        "against": 6
-      }
-    },
-    "goalsDiff": -3,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 26,
-    "team": {
-      "id": 675,
-      "name": "Feyenoord Rotterdam",
-      "shortName": "Feyenoord",
-      "logo": "https://crests.football-data.org/675.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 4,
-        "against": 8
-      }
-    },
-    "goalsDiff": -4,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 27,
-    "team": {
-      "id": 546,
-      "name": "Racing Club de Lens",
-      "shortName": "RC Lens",
-      "logo": "https://crests.football-data.org/546.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 3,
-        "against": 7
-      }
-    },
-    "goalsDiff": -4,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 28,
-    "team": {
-      "id": 5721,
-      "name": "FK Bodø/Glimt",
-      "shortName": "Bodø/Glimt",
-      "logo": "https://crests.football-data.org/5721.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 4,
-        "against": 9
-      }
-    },
-    "goalsDiff": -5,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 29,
-    "team": {
-      "id": 1899,
-      "name": "PAE AEK",
-      "shortName": "PAE AEK",
-      "logo": "https://crests.football-data.org/1899.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 3,
-        "against": 8
-      }
-    },
-    "goalsDiff": -5,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 29,
-    "team": {
-      "id": 721,
-      "name": "RB Leipzig",
-      "shortName": "RB Leipzig",
-      "logo": "https://crests.football-data.org/721.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 1,
-      "draw": 0,
-      "lose": 2,
-      "goals": {
-        "for": 3,
-        "against": 8
-      }
-    },
-    "goalsDiff": -5,
-    "points": 3,
-    "form": ""
-  },
-  {
-    "rank": 31,
-    "team": {
-      "id": 613,
-      "name": "Fenerbahçe SK",
-      "shortName": "Fenerbahçe",
-      "logo": "https://crests.football-data.org/613.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 0,
-      "draw": 2,
-      "lose": 1,
-      "goals": {
-        "for": 3,
-        "against": 9
-      }
-    },
-    "goalsDiff": -6,
-    "points": 2,
-    "form": ""
-  },
-  {
-    "rank": 32,
-    "team": {
-      "id": 930,
-      "name": "SK Slavia Praha",
-      "shortName": "Slavia Praha",
-      "logo": "https://crests.football-data.org/930.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 0,
-      "draw": 1,
-      "lose": 2,
-      "goals": {
-        "for": 4,
-        "against": 7
-      }
-    },
-    "goalsDiff": -3,
-    "points": 1,
-    "form": ""
-  },
-  {
-    "rank": 33,
-    "team": {
-      "id": 5720,
-      "name": "Viking FK",
-      "shortName": "Viking",
-      "logo": "https://crests.football-data.org/5720.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 0,
-      "draw": 1,
-      "lose": 2,
-      "goals": {
-        "for": 5,
-        "against": 9
-      }
-    },
-    "goalsDiff": -4,
-    "points": 1,
-    "form": ""
-  },
-  {
-    "rank": 34,
-    "team": {
-      "id": 503,
-      "name": "FC Porto",
-      "shortName": "Porto",
-      "logo": "https://crests.football-data.org/503.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 0,
-      "draw": 0,
-      "lose": 3,
-      "goals": {
-        "for": 2,
-        "against": 6
-      }
-    },
-    "goalsDiff": -4,
-    "points": 0,
-    "form": ""
-  },
-  {
-    "rank": 35,
-    "team": {
-      "id": 521,
-      "name": "Lille OSC",
-      "shortName": "Lille",
-      "logo": "https://crests.football-data.org/521.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 0,
-      "draw": 0,
-      "lose": 3,
-      "goals": {
-        "for": 4,
-        "against": 10
-      }
-    },
-    "goalsDiff": -6,
-    "points": 0,
-    "form": ""
-  },
-  {
-    "rank": 36,
-    "team": {
-      "id": 7509,
-      "name": "ŠK Slovan Bratislava",
-      "shortName": "Sl. Bratislava",
-      "logo": "https://crests.football-data.org/7509.png"
-    },
-    "all": {
-      "played": 3,
-      "win": 0,
-      "draw": 0,
-      "lose": 3,
-      "goals": {
-        "for": 1,
-        "against": 13
-      }
-    },
-    "goalsDiff": -12,
-    "points": 0,
-    "form": ""
-  }
-];
+        {
+          rank: 1,
+          team: {
+            id: 524,
+            name: "Paris Saint-Germain FC",
+            shortName: "PSG",
+            logo: "https://crests.football-data.org/524.png",
+          },
+          all: {
+            played: 3,
+            win: 3,
+            draw: 0,
+            lose: 0,
+            goals: {
+              for: 14,
+              against: 5,
+            },
+          },
+          goalsDiff: 9,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 2,
+          team: {
+            id: 58,
+            name: "Aston Villa FC",
+            shortName: "Aston Villa",
+            logo: "https://crests.football-data.org/58.png",
+          },
+          all: {
+            played: 3,
+            win: 3,
+            draw: 0,
+            lose: 0,
+            goals: {
+              for: 12,
+              against: 3,
+            },
+          },
+          goalsDiff: 9,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 3,
+          team: {
+            id: 64,
+            name: "Liverpool FC",
+            shortName: "Liverpool",
+            logo: "https://crests.football-data.org/64.png",
+          },
+          all: {
+            played: 3,
+            win: 3,
+            draw: 0,
+            lose: 0,
+            goals: {
+              for: 12,
+              against: 7,
+            },
+          },
+          goalsDiff: 5,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 4,
+          team: {
+            id: 86,
+            name: "Real Madrid CF",
+            shortName: "Real Madrid",
+            logo: "https://crests.football-data.org/86.png",
+          },
+          all: {
+            played: 3,
+            win: 3,
+            draw: 0,
+            lose: 0,
+            goals: {
+              for: 10,
+              against: 5,
+            },
+          },
+          goalsDiff: 5,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 5,
+          team: {
+            id: 90,
+            name: "Real Betis Balompié",
+            shortName: "Real Betis",
+            logo: "https://crests.football-data.org/90.png",
+          },
+          all: {
+            played: 3,
+            win: 3,
+            draw: 0,
+            lose: 0,
+            goals: {
+              for: 7,
+              against: 4,
+            },
+          },
+          goalsDiff: 3,
+          points: 9,
+          form: "",
+        },
+        {
+          rank: 6,
+          team: {
+            id: 10,
+            name: "VfB Stuttgart",
+            shortName: "Stuttgart",
+            logo: "https://crests.football-data.org/10.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 1,
+            lose: 0,
+            goals: {
+              for: 7,
+              against: 2,
+            },
+          },
+          goalsDiff: 5,
+          points: 7,
+          form: "",
+        },
+        {
+          rank: 7,
+          team: {
+            id: 57,
+            name: "Arsenal FC",
+            shortName: "Arsenal",
+            logo: "https://crests.football-data.org/57.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 1,
+            lose: 0,
+            goals: {
+              for: 6,
+              against: 2,
+            },
+          },
+          goalsDiff: 4,
+          points: 7,
+          form: "",
+        },
+        {
+          rank: 8,
+          team: {
+            id: 81,
+            name: "FC Barcelona",
+            shortName: "Barça",
+            logo: "https://crests.football-data.org/81.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 0,
+            lose: 1,
+            goals: {
+              for: 11,
+              against: 6,
+            },
+          },
+          goalsDiff: 5,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 9,
+          team: {
+            id: 108,
+            name: "FC Internazionale Milano",
+            shortName: "Inter",
+            logo: "https://crests.football-data.org/108.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 1,
+            lose: 0,
+            goals: {
+              for: 5,
+              against: 0,
+            },
+          },
+          goalsDiff: 5,
+          points: 7,
+          form: "",
+        },
+        {
+          rank: 10,
+          team: {
+            id: 65,
+            name: "Manchester City FC",
+            shortName: "Man City",
+            logo: "https://crests.football-data.org/65.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 0,
+            lose: 1,
+            goals: {
+              for: 9,
+              against: 5,
+            },
+          },
+          goalsDiff: 4,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 11,
+          team: {
+            id: 851,
+            name: "Club Brugge KV",
+            shortName: "Club Brugge",
+            logo: "https://crests.football-data.org/851.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 0,
+            lose: 1,
+            goals: {
+              for: 9,
+              against: 6,
+            },
+          },
+          goalsDiff: 3,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 12,
+          team: {
+            id: 498,
+            name: "Sporting Clube de Portugal",
+            shortName: "Sporting CP",
+            logo: "https://crests.football-data.org/498.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 0,
+            lose: 1,
+            goals: {
+              for: 7,
+              against: 4,
+            },
+          },
+          goalsDiff: 3,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 13,
+          team: {
+            id: 4,
+            name: "Borussia Dortmund",
+            shortName: "Dortmund",
+            logo: "https://crests.football-data.org/4.png",
+          },
+          all: {
+            played: 3,
+            win: 2,
+            draw: 0,
+            lose: 1,
+            goals: {
+              for: 5,
+              against: 4,
+            },
+          },
+          goalsDiff: 1,
+          points: 6,
+          form: "",
+        },
+        {
+          rank: 14,
+          team: {
+            id: 5,
+            name: "FC Bayern München",
+            shortName: "Bayern",
+            logo: "https://crests.football-data.org/5.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 2,
+            lose: 0,
+            goals: {
+              for: 10,
+              against: 5,
+            },
+          },
+          goalsDiff: 5,
+          points: 5,
+          form: "",
+        },
+        {
+          rank: 15,
+          team: {
+            id: 100,
+            name: "AS Roma",
+            shortName: "Roma",
+            logo: "https://crests.football-data.org/100.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 1,
+            lose: 1,
+            goals: {
+              for: 8,
+              against: 5,
+            },
+          },
+          goalsDiff: 3,
+          points: 4,
+          form: "",
+        },
+        {
+          rank: 16,
+          team: {
+            id: 78,
+            name: "Club Atlético de Madrid",
+            shortName: "Atleti",
+            logo: "https://crests.football-data.org/78.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 1,
+            lose: 1,
+            goals: {
+              for: 4,
+              against: 3,
+            },
+          },
+          goalsDiff: 1,
+          points: 4,
+          form: "",
+        },
+        {
+          rank: 17,
+          team: {
+            id: 1887,
+            name: "FK Shakhtar Donetsk",
+            shortName: "Shaktar",
+            logo: "https://crests.football-data.org/1887.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 1,
+            lose: 1,
+            goals: {
+              for: 4,
+              against: 3,
+            },
+          },
+          goalsDiff: 1,
+          points: 4,
+          form: "",
+        },
+        {
+          rank: 18,
+          team: {
+            id: 674,
+            name: "PSV",
+            shortName: "PSV",
+            logo: "https://crests.football-data.org/674.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 1,
+            lose: 1,
+            goals: {
+              for: 2,
+              against: 2,
+            },
+          },
+          goalsDiff: 0,
+          points: 4,
+          form: "",
+        },
+        {
+          rank: 19,
+          team: {
+            id: 94,
+            name: "Villarreal CF",
+            shortName: "Villarreal",
+            logo: "https://crests.football-data.org/94.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 8,
+              against: 8,
+            },
+          },
+          goalsDiff: 0,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 20,
+          team: {
+            id: 108,
+            name: "FC Internazionale Milano",
+            shortName: "Inter",
+            logo: "https://crests.football-data.org/108.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 5,
+              against: 6,
+            },
+          },
+          goalsDiff: -1,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 20,
+          team: {
+            id: 66,
+            name: "Manchester United FC",
+            shortName: "Man United",
+            logo: "https://crests.football-data.org/66.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 5,
+              against: 6,
+            },
+          },
+          goalsDiff: -1,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 22,
+          team: {
+            id: 113,
+            name: "SSC Napoli",
+            shortName: "Napoli",
+            logo: "https://crests.football-data.org/113.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 5,
+              against: 7,
+            },
+          },
+          goalsDiff: -2,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 23,
+          team: {
+            id: 610,
+            name: "Galatasaray SK",
+            shortName: "Galatasaray",
+            logo: "https://crests.football-data.org/610.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 6,
+              against: 9,
+            },
+          },
+          goalsDiff: -3,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 24,
+          team: {
+            id: 2016,
+            name: "LASK Linz",
+            shortName: "LASK",
+            logo: "https://crests.football-data.org/2016.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 6,
+              against: 9,
+            },
+          },
+          goalsDiff: -3,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 25,
+          team: {
+            id: 10233,
+            name: "Sabah FK",
+            shortName: "Sabah FK",
+            logo: "https://crests.football-data.org/10233.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 3,
+              against: 6,
+            },
+          },
+          goalsDiff: -3,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 26,
+          team: {
+            id: 675,
+            name: "Feyenoord Rotterdam",
+            shortName: "Feyenoord",
+            logo: "https://crests.football-data.org/675.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 4,
+              against: 8,
+            },
+          },
+          goalsDiff: -4,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 27,
+          team: {
+            id: 546,
+            name: "Racing Club de Lens",
+            shortName: "RC Lens",
+            logo: "https://crests.football-data.org/546.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 3,
+              against: 7,
+            },
+          },
+          goalsDiff: -4,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 28,
+          team: {
+            id: 5721,
+            name: "FK Bodø/Glimt",
+            shortName: "Bodø/Glimt",
+            logo: "https://crests.football-data.org/5721.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 4,
+              against: 9,
+            },
+          },
+          goalsDiff: -5,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 29,
+          team: {
+            id: 1899,
+            name: "PAE AEK",
+            shortName: "PAE AEK",
+            logo: "https://crests.football-data.org/1899.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 3,
+              against: 8,
+            },
+          },
+          goalsDiff: -5,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 29,
+          team: {
+            id: 721,
+            name: "RB Leipzig",
+            shortName: "RB Leipzig",
+            logo: "https://crests.football-data.org/721.png",
+          },
+          all: {
+            played: 3,
+            win: 1,
+            draw: 0,
+            lose: 2,
+            goals: {
+              for: 3,
+              against: 8,
+            },
+          },
+          goalsDiff: -5,
+          points: 3,
+          form: "",
+        },
+        {
+          rank: 31,
+          team: {
+            id: 613,
+            name: "Fenerbahçe SK",
+            shortName: "Fenerbahçe",
+            logo: "https://crests.football-data.org/613.png",
+          },
+          all: {
+            played: 3,
+            win: 0,
+            draw: 2,
+            lose: 1,
+            goals: {
+              for: 3,
+              against: 9,
+            },
+          },
+          goalsDiff: -6,
+          points: 2,
+          form: "",
+        },
+        {
+          rank: 32,
+          team: {
+            id: 930,
+            name: "SK Slavia Praha",
+            shortName: "Slavia Praha",
+            logo: "https://crests.football-data.org/930.png",
+          },
+          all: {
+            played: 3,
+            win: 0,
+            draw: 1,
+            lose: 2,
+            goals: {
+              for: 4,
+              against: 7,
+            },
+          },
+          goalsDiff: -3,
+          points: 1,
+          form: "",
+        },
+        {
+          rank: 33,
+          team: {
+            id: 5720,
+            name: "Viking FK",
+            shortName: "Viking",
+            logo: "https://crests.football-data.org/5720.png",
+          },
+          all: {
+            played: 3,
+            win: 0,
+            draw: 1,
+            lose: 2,
+            goals: {
+              for: 5,
+              against: 9,
+            },
+          },
+          goalsDiff: -4,
+          points: 1,
+          form: "",
+        },
+        {
+          rank: 34,
+          team: {
+            id: 503,
+            name: "FC Porto",
+            shortName: "Porto",
+            logo: "https://crests.football-data.org/503.png",
+          },
+          all: {
+            played: 3,
+            win: 0,
+            draw: 0,
+            lose: 3,
+            goals: {
+              for: 2,
+              against: 6,
+            },
+          },
+          goalsDiff: -4,
+          points: 0,
+          form: "",
+        },
+        {
+          rank: 35,
+          team: {
+            id: 521,
+            name: "Lille OSC",
+            shortName: "Lille",
+            logo: "https://crests.football-data.org/521.png",
+          },
+          all: {
+            played: 3,
+            win: 0,
+            draw: 0,
+            lose: 3,
+            goals: {
+              for: 4,
+              against: 10,
+            },
+          },
+          goalsDiff: -6,
+          points: 0,
+          form: "",
+        },
+        {
+          rank: 36,
+          team: {
+            id: 7509,
+            name: "ŠK Slovan Bratislava",
+            shortName: "Sl. Bratislava",
+            logo: "https://crests.football-data.org/7509.png",
+          },
+          all: {
+            played: 3,
+            win: 0,
+            draw: 0,
+            lose: 3,
+            goals: {
+              for: 1,
+              against: 13,
+            },
+          },
+          goalsDiff: -12,
+          points: 0,
+          form: "",
+        },
+      ];
 
       function switchStandingsLeague(leagueId) {
         standingsLeague = leagueId;
@@ -2882,9 +2968,6 @@
             const form = item.form || "";
 
             const shortName = team.shortName || getShortClubName(team.name);
-            const isBarca =
-              (team.name || "").toLowerCase().includes("barcelona") ||
-              (team.shortName || "").toLowerCase().includes("barça");
 
             let rankBadge = `<span class="font-bold text-slate-500 text-xs sm:text-sm">${rank}</span>`;
             if (isUCL) {
@@ -2927,9 +3010,7 @@
                   ? "text-rose-600"
                   : "text-slate-500";
 
-            const rowClass = isBarca
-              ? "bg-amber-50/70 hover:bg-amber-100/60 font-semibold border-l-3 border-amber-400 transition"
-              : "hover:bg-slate-50/80 transition";
+            const rowClass = "hover:bg-slate-50/80 transition";
 
             return `
               <tr class="${rowClass}">
@@ -2942,7 +3023,6 @@
                     <span class="font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none text-xs sm:text-sm" title="${team.name}">
                       ${shortName}
                     </span>
-                    ${isBarca ? `<span class="hidden sm:inline-block px-1.5 py-0.2 rounded text-[10px] bg-amber-400 text-slate-900 font-bold">Barca</span>` : ""}
                   </div>
                 </td>
                 <td class="py-2 sm:py-2.5 px-2 text-center text-slate-700 font-medium">${played}</td>
@@ -3128,130 +3208,18 @@
       function updateLeagueCounts() {
         const currentList = matchesCache[currentTab] || [];
         const countAll = currentList.length;
-        const count2 = currentList.filter((m) => m.league.id === 2).length;
-        const count39 = currentList.filter((m) => m.league.id === 39).length;
-        const count140 = currentList.filter((m) => m.league.id === 140).length;
+        const count2 = currentList.filter((m) => m.league?.id === 2).length;
+        const count39 = currentList.filter((m) => m.league?.id === 39).length;
+        const count140 = currentList.filter((m) => m.league?.id === 140).length;
 
-        document.getElementById("count-all").textContent = `(${countAll})`;
-        document.getElementById("count-2").textContent = `(${count2})`;
-        document.getElementById("count-39").textContent = `(${count39})`;
-        document.getElementById("count-140").textContent = `(${count140})`;
-      }
-
-      // Render bảng tỷ lệ kèo (2 cột: HDP & Tài Xỉu)
-      function renderOddsBlock(oddsParsed, matchIndex) {
-        if (!oddsParsed) {
-          return `
-            <div class="mt-3 p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl text-center text-xs text-slate-400 italic">
-              Nhà cái chưa mở kèo cho trận này
-            </div>
-          `;
-        }
-
-        const ah = oddsParsed.asianHandicap;
-        const ou = oddsParsed.overUnder;
-
-        return `
-          <div class="mt-3 pt-3 border-t border-slate-100 space-y-2">
-            <!-- Grid 2 cột song song cho mobile -->
-            <div class="grid grid-cols-2 gap-2 sm:gap-3">
-              <!-- CỘT 1: KÈO CHÂU Á (HDP) -->
-              <div class="bg-emerald-50/70 border border-emerald-200/90 rounded-xl p-2.5 sm:p-3 flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-[11px] sm:text-xs font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Kèo Chấp
-                    </span>
-                    ${
-                      ah
-                        ? `<span class="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-200/70 text-emerald-900 border border-emerald-300">${ah.displayBadge}</span>`
-                        : ""
-                    }
-                  </div>
-
-                  ${
-                    ah
-                      ? `
-                    <div class="space-y-1.5">
-                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-emerald-100 px-2 py-1.5 rounded-lg shadow-2xs">
-                        <span class="text-slate-700 font-semibold truncate pr-1">${ah.homeLabel}</span>
-                        <span class="font-mono font-bold text-emerald-700 shrink-0 text-sm sm:text-base">${ah.homeOdd}</span>
-                      </div>
-                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-emerald-100 px-2 py-1.5 rounded-lg shadow-2xs">
-                        <span class="text-slate-700 font-semibold truncate pr-1">${ah.awayLabel}</span>
-                        <span class="font-mono font-bold text-emerald-700 shrink-0 text-sm sm:text-base">${ah.awayOdd}</span>
-                      </div>
-                    </div>
-                  `
-                      : `
-                    <div class="text-xs text-slate-400 italic py-3 text-center">Chưa có kèo chấp</div>
-                  `
-                  }
-                </div>
-
-                ${
-                  ah && ah.allLines && ah.allLines.length > 1
-                    ? `
-                  <button
-                    onclick="openHandicapModal(${matchIndex})"
-                    class="mt-2 w-full text-center py-1 text-[11px] sm:text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100/70 rounded-md transition"
-                  >
-                    + Xem ${ah.allLines.length} mốc chấp
-                  </button>
-                `
-                    : ""
-                }
-              </div>
-
-              <!-- CỘT 2: KÈO TÀI XỈU (O/U) -->
-              <div class="bg-amber-50/70 border border-amber-200/90 rounded-xl p-2.5 sm:p-3 flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-[11px] sm:text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Tài Xỉu
-                    </span>
-                    ${
-                      ou
-                        ? `<span class="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900 border border-amber-300">${ou.displayBadge}</span>`
-                        : ""
-                    }
-                  </div>
-
-                  ${
-                    ou
-                      ? `
-                    <div class="space-y-1.5">
-                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-amber-100 px-2 py-1.5 rounded-lg shadow-2xs">
-                        <span class="text-slate-700 font-semibold truncate pr-1">Tài (${ou.total})</span>
-                        <span class="font-mono font-bold text-amber-700 shrink-0 text-sm sm:text-base">${ou.overOdd}</span>
-                      </div>
-                      <div class="flex items-center justify-between text-xs sm:text-sm bg-white/95 border border-amber-100 px-2 py-1.5 rounded-lg shadow-2xs">
-                        <span class="text-slate-700 font-semibold truncate pr-1">Xỉu (${ou.total})</span>
-                        <span class="font-mono font-bold text-amber-700 shrink-0 text-sm sm:text-base">${ou.underOdd}</span>
-                      </div>
-                    </div>
-                  `
-                      : `
-                    <div class="text-xs text-slate-400 italic py-3 text-center">Chưa có Tài Xỉu</div>
-                  `
-                  }
-                </div>
-
-                <div class="mt-2 text-center py-1 text-[11px] text-amber-800 font-semibold opacity-75">
-                  Tỷ lệ tổng bàn thắng
-                </div>
-              </div>
-            </div>
-
-            <!-- Footer nhỏ hiển thị nguồn nhà cái -->
-            <div class="flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-0.5 px-0.5">
-              <span>Nhà cái: <strong class="text-slate-600">${oddsParsed.bookmakerName}</strong></span>
-              <span class="flex items-center gap-1 text-emerald-700 font-semibold">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Kèo Châu Á Live
-              </span>
-            </div>
-          </div>
-        `;
+        const setTxt = (id, txt) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = txt;
+        };
+        setTxt("count-all", `(${countAll})`);
+        setTxt("count-2", `(${count2})`);
+        setTxt("count-39", `(${count39})`);
+        setTxt("count-140", `(${count140})`);
       }
 
       // ==============================================================
@@ -3346,7 +3314,7 @@
         `;
       }
 
-      function renderMatchEventsSection(item) {
+      function renderMatchEventsSection(item, autoOpen = false) {
         const fixId = item.fixture?.id;
         const homeId = item.teams?.home?.id;
         const awayId = item.teams?.away?.id;
@@ -3372,8 +3340,16 @@
             )
           : "";
 
+        if (autoOpen) {
+          return `
+            <div id="events-details-${fixId}" class="mt-1" ${isPreloaded ? 'data-loaded="true"' : ""}>
+              ${preloadedHtml || `<div class="mt-2 pt-1 border-t border-slate-100 text-center text-[11px] text-slate-400">Đang tải bàn thắng &amp; thẻ đỏ...</div>`}
+            </div>
+          `;
+        }
+
         return `
-          <div class="mt-2.5 pt-2 border-t border-slate-100">
+          <div class="mt-2 pt-2 border-t border-slate-100">
             <div class="flex items-center justify-center">
               <button
                 id="events-toggle-btn-${fixId}"
@@ -3502,116 +3478,293 @@
       }
 
       // ==============================================================
-      // RENDER THẺ TRẬN ĐẤU ĐÃ KẾT THÚC (KẾT QUẢ TỶ SỐ)
+      // TÊN GIẢI ĐẤU VIỆT HÓA & RENDER GIAO DIỆN CHUẨN THỂ THAO (THEO 1.JPG)
       // ==============================================================
 
-      function renderFinishedMatchCard(item, isBarcaResult = false) {
-        const homeScore = item.goals?.home ?? 0;
-        const awayScore = item.goals?.away ?? 0;
-        const totalGoals = homeScore + awayScore;
-        const homeWin = homeScore > awayScore;
-        const awayWin = awayScore > homeScore;
+      function getLeagueVietnameseName(league) {
+        if (!league) return "Giải Đấu";
+        const id = league.id;
+        const name = league.name || "";
+        const lower = name.toLowerCase();
+        if (id === 2 || lower.includes("champions league")) {
+          return "Cúp C1 Châu Âu";
+        }
+        if (id === 39 || lower.includes("premier league")) {
+          return "Ngoại Hạng Anh";
+        }
+        if (id === 140 || lower.includes("la liga")) {
+          return "La Liga";
+        }
+        return name;
+      }
 
+      function renderMatchRow(item) {
+        const fixId = item.fixture?.id;
         const homeName = getShortClubName(item.teams.home?.name || "");
         const awayName = getShortClubName(item.teams.away?.name || "");
 
+        const isMU = isMUMatch(item);
+        const homeIsMU =
+          item.teams.home?.id === 33 ||
+          (item.teams.home?.name || "")
+            .toLowerCase()
+            .includes("manchester united") ||
+          (item.teams.home?.name || "").toLowerCase().includes("man united") ||
+          (item.teams.home?.name || "").toLowerCase().includes("man utd");
+        const awayIsMU =
+          item.teams.away?.id === 33 ||
+          (item.teams.away?.name || "")
+            .toLowerCase()
+            .includes("manchester united") ||
+          (item.teams.away?.name || "").toLowerCase().includes("man united") ||
+          (item.teams.away?.name || "").toLowerCase().includes("man utd");
+
         const dateObj = new Date(item.fixture.date);
-        const timeStr = dateObj.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const dateStr = dateObj.toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-        });
+        const day = dateObj.getDate().toString().padStart(2, "0");
+        const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+        const hours = dateObj.getHours().toString().padStart(2, "0");
+        const mins = dateObj.getMinutes().toString().padStart(2, "0");
+        const timeDisplay = `${day}-${month} ${hours}:${mins}`;
 
-        const statusShort = item.fixture.status?.short || "FT";
+        const statusShort = item.fixture.status?.short || "NS";
+        const isLive = ["1H", "HT", "2H", "ET", "P", "LIVE"].includes(
+          statusShort,
+        );
+        const isFinished = ["FT", "AET", "PEN"].includes(statusShort);
+        const hasScore =
+          item.goals?.home !== null && item.goals?.home !== undefined;
+        const homeScore = item.goals?.home ?? 0;
+        const awayScore = item.goals?.away ?? 0;
+        const homeWin = homeScore > awayScore;
+        const awayWin = awayScore > homeScore;
 
-        const cardWrapperClass = isBarcaResult
-          ? "bg-gradient-to-b from-amber-50/60 via-white to-white rounded-2xl border-2 border-amber-400 shadow-md ring-3 ring-amber-400/20 p-3.5 sm:p-5 relative overflow-hidden transition-all"
-          : "bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all p-3.5 sm:p-5";
+        let statusBadge = "";
+        if (isLive) {
+          statusBadge = `
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping"></span>
+              LIVE ${item.fixture.status.elapsed ? `${item.fixture.status.elapsed}'` : ""}
+            </span>
+          `;
+        } else if (isFinished) {
+          statusBadge = `
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200/80">
+              FT
+            </span>
+          `;
+        }
 
-        const barcaBanner = isBarcaResult
-          ? `
-            <div class="-mx-3.5 -mt-3.5 sm:-mx-5 sm:-mt-5 mb-3 px-3.5 py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-bold text-xs sm:text-sm rounded-t-2xl flex items-center justify-between shadow-xs border-b border-amber-300/80">
-              <div class="flex items-center gap-2">
-                <span class="text-base sm:text-lg">👑</span>
-                <span class="font-extrabold uppercase tracking-wide">Mời anh Dú xem kết quả</span>
-                <span class="hidden sm:inline-block px-2 py-0.5 rounded-full bg-slate-900/15 text-slate-900 text-xs font-bold">Trận cầu FC Barcelona</span>
+        // 1. Phân tích Kèo Chấp
+        const ah = item.oddsParsed?.asianHandicap;
+        const hasAh = !!ah;
+        const hasLines = ah && ah.allLines && ah.allLines.length > 1;
+        const ahHomeBadge = hasAh ? formatHandicapBadge(ah.hVal, true) : "-";
+        const ahAwayBadge = hasAh ? formatHandicapBadge(ah.hVal, false) : "-";
+        const ahHomeOdd = hasAh && ah.homeOdd ? ah.homeOdd : "-";
+        const ahAwayOdd = hasAh && ah.awayOdd ? ah.awayOdd : "-";
+
+        // 2. Phân tích Kèo Tài Xỉu
+        const ou = item.oddsParsed?.overUnder;
+        const hasOu = !!ou;
+        const ouOverBadge = hasOu
+          ? formatOverUnderBadge(ou.total, true)
+          : "Tài 2.5";
+        const ouUnderBadge = hasOu
+          ? formatOverUnderBadge(ou.total, false)
+          : "Xỉu 2.5";
+        const ouOverOdd = hasOu && ou.overOdd ? ou.overOdd : "-";
+        const ouUnderOdd = hasOu && ou.underOdd ? ou.underOdd : "-";
+
+        // 3. Phân tích Kèo 1X2
+        const mw = item.oddsParsed?.matchWinner;
+        const hasMw = !!mw;
+        const mwHomeOdd = hasMw && mw.homeOdd ? mw.homeOdd : "-";
+        const mwAwayOdd = hasMw && mw.awayOdd ? mw.awayOdd : "-";
+
+        // Mã số ở góc phải (như số 326 trong hình 1.jpg)
+        const codeNum = fixId ? (fixId % 899) + 100 : "326";
+
+        return `
+          <div class="py-3 sm:py-3.5 border-b border-slate-100 last:border-b-0 ${isMU ? "bg-gradient-to-b from-red-50/80 via-white to-red-50/40 rounded-2xl p-3 sm:p-4 my-2.5 border-2 border-red-500 shadow-md shadow-red-500/15 ring-4 ring-red-500/15 transition-all" : ""}">
+            <!-- Dòng 1: Ngày giờ thi đấu bên trái & Số hiệu góc phải chuẩn 1.jpg -->
+            <div class="flex items-center justify-between text-xs sm:text-sm mb-2">
+              <div class="flex items-center gap-2 text-slate-800 font-medium">
+                <span>${timeDisplay}</span>
+                ${statusBadge}
+                ${isMU ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white flex items-center gap-1.5 shadow-sm shadow-red-500/30 tracking-wide uppercase"><span class="w-2 h-2 rounded-full bg-white animate-ping"></span>🔴 MANCHESTER UNITED</span>` : ""}
               </div>
-              <div class="flex items-center gap-1.5 text-xs font-extrabold bg-white/40 px-2 py-0.5 rounded-lg border border-white/50">
-                <span>🔴🔵 FC Barcelona</span>
+              <div class="px-2.5 py-0.5 rounded-xl border border-slate-200/90 text-slate-400 text-xs font-medium bg-white">
+                ${codeNum}
               </div>
             </div>
-          `
-          : "";
 
-        // TÍNH TOÁN KÈO TÀI XỈU VÀ TẠO THÔNG ĐIỆP CHO ANH DÚ
-        let barcaOuBox = "";
-        if (isBarcaResult) {
-          const rawOuLine = item.oddsParsed?.overUnder?.total || "2.5";
-          const ouLine = parseFloat(rawOuLine);
-
-          const isOver = totalGoals > ouLine;
-          const isUnder = totalGoals < ouLine;
-
-          if (isOver) {
-            barcaOuBox = `
-              <div class="mt-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs border border-emerald-400">
-                <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                    <span>🎉🍻</span>
-                    <span>NỔ TÀI! CHÚC MỪNG TÚ GIÁP</span>
-                  </div>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-white/20 text-white">
-                    ${totalGoals} bàn > Kèo ${ouLine}
+            <!-- Dòng 2 & 3: Tên 2 đội bên trái, 3 cột kèo bên phải -->
+            <div class="grid grid-cols-[1fr_auto] items-center gap-2 sm:gap-4">
+              <!-- Cột trái: Tên 2 đội thuần túy KHÔNG LOGO như 1.jpg -->
+              <div class="flex flex-col justify-between h-[82px] py-1 min-w-0">
+                <!-- Đội nhà -->
+                <div class="flex items-center justify-between gap-1.5 min-w-0">
+                  <span class="text-sm sm:text-base ${homeIsMU ? "font-black text-red-700 underline decoration-red-500 decoration-2 underline-offset-4 tracking-wide" : "font-medium text-slate-900"} truncate" title="${item.teams.home.name}">
+                    ${homeIsMU ? "🔴 " : ""}${homeName}
                   </span>
+                  ${hasScore ? `<span class="font-bold text-base sm:text-lg text-slate-900 pr-1 shrink-0 ${homeWin ? "text-emerald-700" : ""}">${homeScore}</span>` : ""}
                 </div>
-                <p class="text-xs sm:text-sm mt-1 text-emerald-100 font-medium">
-                  Bú đậm rồi Dú ơi, đếm tiền tha hồ bia bọt nhé! 💸🤑
-                </p>
-                <div class="mt-2 pt-1.5 border-t border-emerald-500/50 flex items-center justify-between text-[11px] text-emerald-200">
-                  <span>Trạng thái: <strong>Tài Thắng</strong></span>
+
+                <!-- Đội khách -->
+                <div class="flex items-center justify-between gap-1.5 min-w-0">
+                  <span class="text-sm sm:text-base ${awayIsMU ? "font-black text-red-700 underline decoration-red-500 decoration-2 underline-offset-4 tracking-wide" : "font-medium text-slate-900"} truncate" title="${item.teams.away.name}">
+                    ${awayIsMU ? "🔴 " : ""}${awayName}
+                  </span>
+                  ${hasScore ? `<span class="font-bold text-base sm:text-lg text-slate-900 pr-1 shrink-0 ${awayWin ? "text-emerald-700" : ""}">${awayScore}</span>` : ""}
+                </div>
+              </div>
+
+              <!-- Cột phải: 3 cột ô cược bo góc màu xám nhạt như 1.jpg -->
+              <div class="grid grid-cols-3 gap-1.5 sm:gap-2 w-[216px] sm:w-[250px] shrink-0">
+                <!-- Cột 1: Cược Chấp -->
+                <div class="space-y-1.5">
+                  <div
+                    ${hasLines ? `onclick="openHandicapModal(${fixId})"` : ""}
+                    class="bg-[#f4f5f7] hover:bg-slate-200/80 rounded-xl sm:rounded-2xl py-1.5 px-1 text-center transition ${hasLines ? "cursor-pointer" : ""}"
+                    title="${hasLines ? "Xem các mốc chấp" : ""}"
+                  >
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-normal leading-tight mb-0.5 truncate">${ahHomeBadge}</div>
+                    <div class="text-sm sm:text-base font-bold text-slate-900 leading-tight">${ahHomeOdd}</div>
+                  </div>
+                  <div
+                    ${hasLines ? `onclick="openHandicapModal(${fixId})"` : ""}
+                    class="bg-[#f4f5f7] hover:bg-slate-200/80 rounded-xl sm:rounded-2xl py-1.5 px-1 text-center transition ${hasLines ? "cursor-pointer" : ""}"
+                    title="${hasLines ? "Xem các mốc chấp" : ""}"
+                  >
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-normal leading-tight mb-0.5 truncate">${ahAwayBadge}</div>
+                    <div class="text-sm sm:text-base font-bold text-slate-900 leading-tight">${ahAwayOdd}</div>
+                  </div>
+                </div>
+
+                <!-- Cột 2: Tài / Xỉu -->
+                <div class="space-y-1.5">
+                  <div class="bg-[#f4f5f7] hover:bg-slate-200/80 rounded-xl sm:rounded-2xl py-1.5 px-1 text-center transition">
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-normal leading-tight mb-0.5 truncate">${ouOverBadge}</div>
+                    <div class="text-sm sm:text-base font-bold text-slate-900 leading-tight">${ouOverOdd}</div>
+                  </div>
+                  <div class="bg-[#f4f5f7] hover:bg-slate-200/80 rounded-xl sm:rounded-2xl py-1.5 px-1 text-center transition">
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-normal leading-tight mb-0.5 truncate">${ouUnderBadge}</div>
+                    <div class="text-sm sm:text-base font-bold text-slate-900 leading-tight">${ouUnderOdd}</div>
+                  </div>
+                </div>
+
+                <!-- Cột 3: 1X2 -->
+                <div class="space-y-1.5">
+                  <div class="bg-[#f4f5f7] hover:bg-slate-200/80 rounded-xl sm:rounded-2xl py-1.5 px-1 text-center transition">
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-normal leading-tight mb-0.5 truncate">Nhà</div>
+                    <div class="text-sm sm:text-base font-bold text-slate-900 leading-tight">${mwHomeOdd}</div>
+                  </div>
+                  <div class="bg-[#f4f5f7] hover:bg-slate-200/80 rounded-xl sm:rounded-2xl py-1.5 px-1 text-center transition">
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-normal leading-tight mb-0.5 truncate">Khách</div>
+                    <div class="text-sm sm:text-base font-bold text-slate-900 leading-tight">${mwAwayOdd}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sự kiện bàn thắng / thẻ đỏ (nếu là trận đã có tỷ số) -->
+            ${hasScore || isFinished ? renderMatchEventsSection(item) : ""}
+          </div>
+        `;
+      }
+
+      function renderFinishedMatchRow(item) {
+        const fixId = item.fixture?.id;
+        const homeName = getShortClubName(item.teams.home?.name || "");
+        const awayName = getShortClubName(item.teams.away?.name || "");
+
+        const isMU = isMUMatch(item);
+        const homeIsMU =
+          item.teams.home?.id === 33 ||
+          (item.teams.home?.name || "")
+            .toLowerCase()
+            .includes("manchester united") ||
+          (item.teams.home?.name || "").toLowerCase().includes("man united") ||
+          (item.teams.home?.name || "").toLowerCase().includes("man utd");
+        const awayIsMU =
+          item.teams.away?.id === 33 ||
+          (item.teams.away?.name || "")
+            .toLowerCase()
+            .includes("manchester united") ||
+          (item.teams.away?.name || "").toLowerCase().includes("man united") ||
+          (item.teams.away?.name || "").toLowerCase().includes("man utd");
+
+        const dateObj = new Date(item.fixture.date);
+        const day = dateObj.getDate().toString().padStart(2, "0");
+        const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+        const hours = dateObj.getHours().toString().padStart(2, "0");
+        const mins = dateObj.getMinutes().toString().padStart(2, "0");
+        const timeDisplay = `${day}-${month} ${hours}:${mins}`;
+
+        const homeScore = item.goals?.home ?? 0;
+        const awayScore = item.goals?.away ?? 0;
+        const homeWin = homeScore > awayScore;
+        const awayWin = awayScore > homeScore;
+
+        // Xác định kết quả của Manchester United
+        let muStatus = null; // 'win' | 'lose' | 'draw'
+        if (isMU) {
+          if (homeIsMU) {
+            if (homeScore > awayScore) muStatus = "win";
+            else if (homeScore < awayScore) muStatus = "lose";
+            else muStatus = "draw";
+          } else if (awayIsMU) {
+            if (awayScore > homeScore) muStatus = "win";
+            else if (awayScore < homeScore) muStatus = "lose";
+            else muStatus = "draw";
+          }
+        }
+
+        // Tạo thông điệp hài hước đặc quyền cho fan Quỷ Đỏ MU
+        let muBannerHtml = "";
+        if (isMU && muStatus) {
+          if (muStatus === "win") {
+            muBannerHtml = `
+              <div class="mt-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-white shadow-md shadow-red-500/20 border border-amber-300/70 flex items-start gap-2.5">
+                <span class="text-2xl sm:text-3xl shrink-0 animate-bounce">🎉</span>
+                <div class="min-w-0 flex-1">
+                  <div class="font-black uppercase tracking-wider flex items-center gap-1.5 text-amber-200 text-xs sm:text-sm">
+                    <span>🔥 GÁY LÊN ANH EM MANUCIAN ƠI!</span>
+                    <span class="px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-bold text-white uppercase">MU Chiến Thắng</span>
+                  </div>
+                  <p class="text-xs sm:text-sm font-medium mt-1 text-white leading-relaxed">
+                    Chúc mừng toàn thể các fan Quỷ Đỏ! Hôm nay MU đá như rồng như hổ, anh em ngẩng cao đầu bước ra khỏi hang hít thở khí trời và chuẩn bị phát card thôi nào! 🔴🕺🍾✨
+                  </p>
                 </div>
               </div>
             `;
-          } else if (isUnder) {
-            barcaOuBox = `
-              <div class="mt-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-xs border border-rose-400">
-                <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                    <span>🍜😭</span>
-                    <span>VỀ XỈU RỒI! CHIA BUỒN CÙNG ANH DÚ</span>
+          } else if (muStatus === "lose") {
+            muBannerHtml = `
+              <div class="mt-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-slate-950 via-neutral-900 to-red-950 text-white shadow-lg shadow-black/40 border-2 border-red-500/80 flex items-start gap-2.5">
+                <span class="text-2xl sm:text-3xl shrink-0 animate-pulse">🦇</span>
+                <div class="min-w-0 flex-1">
+                  <div class="font-black uppercase tracking-wider flex items-center gap-1.5 text-red-400 text-xs sm:text-sm">
+                    <span>🚨 BÁO ĐỘNG ĐỎ: MỜI ANH EM MU VÀO HANG!</span>
+                    <span class="px-2 py-0.5 bg-red-600/40 rounded-full text-[10px] font-bold text-red-200 uppercase">Cửa Hang Đang Mở</span>
                   </div>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-white/20 text-white">
-                    ${totalGoals} bàn < Kèo ${ouLine}
-                  </span>
-                </div>
-                <p class="text-xs sm:text-sm mt-1 text-rose-100 font-medium">
-                  Toang rồi anh Dú ơi... Tối nay hai gói mì tôm ăn tạm ấm bụng nha anh! 🙏🧊
-                </p>
-                <div class="mt-2 pt-1.5 border-t border-rose-500/50 flex items-center justify-between text-[11px] text-rose-200">
-                  <span>Trạng thái: <strong>Về Xỉu</strong></span>
+                  <p class="text-xs sm:text-sm font-medium mt-1 text-slate-200 leading-relaxed">
+                    Trận này Quỷ Đỏ lại tấu hài rồi! Xin mời các anh em fan MU trật tự xếp hàng điểm danh vào hang ngay! Nhớ mang theo chăn ấm nước lọc, hang đợt này đã lắp điều hòa hai chiều rồi nhé! 🚪❄️⛺🔦
+                  </p>
                 </div>
               </div>
             `;
-          } else {
-            barcaOuBox = `
-              <div class="mt-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-xs border border-amber-300">
-                <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                    <span>🤝😅</span>
-                    <span>HÒA KÈO TÀI XỈU!</span>
+          } else if (muStatus === "draw") {
+            muBannerHtml = `
+              <div class="mt-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-100 text-amber-950 shadow-xs border border-amber-300 flex items-start gap-2.5">
+                <span class="text-2xl sm:text-3xl shrink-0">🧣</span>
+                <div class="min-w-0 flex-1">
+                  <div class="font-black uppercase tracking-wider flex items-center gap-1.5 text-amber-800 text-xs sm:text-sm">
+                    <span>🏕️ MU HÒA: ĐỨNG HÓNG GIÓ NGAY CỬA HANG</span>
+                    <span class="px-2 py-0.5 bg-amber-200 rounded-full text-[10px] font-bold text-amber-900 uppercase">1 Điểm Về Túi</span>
                   </div>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-slate-900/20 text-slate-900">
-                    ${totalGoals} bàn = Kèo ${ouLine}
-                  </span>
-                </div>
-                <p class="text-xs sm:text-sm mt-1 text-slate-900 font-medium">
-                  Hoàn tiền về ví nguyên vẹn, hú hồn chim én anh Dú nhé! 💨
-                </p>
-                <div class="mt-2 pt-1.5 border-t border-amber-600/30 flex items-center justify-between text-[11px] text-slate-800">
-                  <span>Trạng thái: <strong>Hòa Kèo</strong></span>
+                  <p class="text-xs sm:text-sm font-medium mt-1 text-amber-900 leading-relaxed">
+                    Trận này chia điểm hú vía, anh em tạm thời đứng ở cửa hang, một chân trong hang một chân ngoài hang hóng gió xem tình hình cho an toàn nhé! 😅☕
+                  </p>
                 </div>
               </div>
             `;
@@ -3619,210 +3772,169 @@
         }
 
         return `
-          <div class="${cardWrapperClass}">
-            ${barcaBanner}
-
-            <!-- Header Giải đấu & Tình trạng -->
-            <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
+          <div class="py-3 sm:py-3.5 border-b border-slate-100 last:border-b-0 ${isMU ? "bg-gradient-to-b from-red-50/80 via-white to-red-50/40 rounded-2xl p-3 sm:p-4 my-2.5 border-2 border-red-500 shadow-md shadow-red-500/15 ring-4 ring-red-500/15 transition-all" : ""}">
+            <!-- Header trận: Giờ thi đấu & Badge Hết giờ FT -->
+            <div class="flex items-center justify-between text-xs mb-2">
               <div class="flex items-center gap-2">
-                ${
-                  item.league.logo
-                    ? `<img src="${item.league.logo}" alt="${item.league.name}" class="w-5 h-5 object-contain" onerror="this.style.display='none'" />`
-                    : ""
-                }
-                <span class="text-xs sm:text-sm font-bold text-slate-800">
-                  ${item.league.name}
-                </span>
-                <span class="hidden sm:inline-block text-xs text-slate-400">• ${timeStr} (${dateStr})</span>
+                <span class="text-slate-500 font-medium">${timeDisplay}</span>
+                ${isMU ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white flex items-center gap-1.5 shadow-sm shadow-red-500/30 tracking-wide uppercase"><span class="w-2 h-2 rounded-full bg-white animate-ping"></span>🔴 MANCHESTER UNITED</span>` : ""}
               </div>
-              <div>
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                  HẾT GIỜ (${statusShort})
-                </span>
-              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                HẾT GIỜ (FT)
+              </span>
             </div>
 
-            <!-- Tỷ số trận đấu trên 1 dòng ngang như desktop -->
-            <div class="flex items-center justify-between w-full py-1.5 gap-2">
+            <!-- Tên 2 đội & Tỷ số kết quả to rõ (Không có cột cược) -->
+            <div class="space-y-2 py-0.5">
               <!-- Đội nhà -->
-              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-end min-w-0">
-                <span class="text-xs sm:text-base font-bold truncate text-right ${homeWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}" title="${item.teams.home.name}">
-                  ${homeName}
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-sm sm:text-base ${homeIsMU ? "font-black text-red-700 underline decoration-red-500 decoration-2 underline-offset-4 tracking-wide" : homeWin ? "font-bold text-slate-900" : "font-medium text-slate-700"} truncate" title="${item.teams.home.name}">
+                  ${homeIsMU ? "🔴 " : ""}${homeName}
                 </span>
-                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
-                  <img
-                    src="${item.teams.home.logo}"
-                    alt="${homeName}"
-                    class="w-full h-full object-contain"
-                    onerror="this.src='https://via.placeholder.com/32?text=FC'"
-                  />
-                </div>
-              </div>
-
-              <!-- Hộp Tỷ số Nổi bật (Chính giữa) -->
-              <div class="shrink-0 px-2.5 sm:px-3 py-1 bg-slate-900 text-white font-mono font-bold text-xs sm:text-base rounded-xl shadow-xs text-center tracking-wider whitespace-nowrap">
-                ${homeScore} - ${awayScore}
+                <span class="font-mono font-bold text-base sm:text-lg ${homeWin ? "text-emerald-700 font-extrabold" : "text-slate-900"} shrink-0">
+                  ${homeScore}
+                </span>
               </div>
 
               <!-- Đội khách -->
-              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-start min-w-0">
-                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
-                  <img
-                    src="${item.teams.away.logo}"
-                    alt="${awayName}"
-                    class="w-full h-full object-contain"
-                    onerror="this.src='https://via.placeholder.com/32?text=FC'"
-                  />
-                </div>
-                <span class="text-xs sm:text-base font-bold truncate text-left ${awayWin ? "text-emerald-700 font-extrabold" : "text-slate-900"}" title="${item.teams.away.name}">
-                  ${awayName}
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-sm sm:text-base ${awayIsMU ? "font-black text-red-700 underline decoration-red-500 decoration-2 underline-offset-4 tracking-wide" : awayWin ? "font-bold text-slate-900" : "font-medium text-slate-700"} truncate" title="${item.teams.away.name}">
+                  ${awayIsMU ? "🔴 " : ""}${awayName}
+                </span>
+                <span class="font-mono font-bold text-base sm:text-lg ${awayWin ? "text-emerald-700 font-extrabold" : "text-slate-900"} shrink-0">
+                  ${awayScore}
                 </span>
               </div>
             </div>
 
-            <!-- Danh sách cầu thủ ghi bàn (kèm phút) & Thẻ đỏ 2 đội -->
-            ${renderMatchEventsSection(item)}
+            <!-- Banner hài hước đặc quyền cho MU (Thắng ra hang / Thua vào hang) -->
+            ${muBannerHtml}
 
-            <!-- Khối chúc mừng / chia buồn hài hước cho anh Dú -->
-            ${barcaOuBox}
+            <!-- Danh sách người ghi bàn & thẻ đỏ trực tiếp bên dưới -->
+            ${renderMatchEventsSection(item, true)}
           </div>
         `;
       }
 
-      // ==============================================================
-      // RENDER THẺ TRẬN ĐẤU SẮP ĐÁ (KÈO CHÂU Á & TÀI XỈU)
-      // ==============================================================
+      function renderResultsListGroupedByLeague(resultsList) {
+        if (!resultsList || resultsList.length === 0) return "";
 
-      function renderUpcomingMatchCard(item, index, isBarca = false) {
-        const homeName = getShortClubName(item.teams.home?.name || "");
-        const awayName = getShortClubName(item.teams.away?.name || "");
-
-        const dateObj = new Date(item.fixture.date);
-        const timeStr = dateObj.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const dateStr = dateObj.toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
+        const groups = new Map();
+        resultsList.forEach((m) => {
+          const lid = m.league?.id || 0;
+          if (!groups.has(lid)) {
+            groups.set(lid, {
+              league: m.league,
+              matches: [],
+            });
+          }
+          groups.get(lid).matches.push(m);
         });
 
-        const statusShort = item.fixture.status?.short || "NS";
-        const isLive = ["1H", "HT", "2H", "ET", "P", "LIVE"].includes(
-          statusShort,
-        );
+        // Tự động load chi tiết bàn thắng & thẻ đỏ cho các trận chưa có cache
+        setTimeout(() => {
+          resultsList.forEach((m) => {
+            const fixId = m.fixture?.id;
+            const detailsEl = document.getElementById(
+              `events-details-${fixId}`,
+            );
+            if (detailsEl && detailsEl.getAttribute("data-loaded") !== "true") {
+              loadDetailsContent(
+                fixId,
+                m.teams?.home?.id,
+                m.teams?.away?.id,
+                m.goals?.home ?? 0,
+                m.goals?.away ?? 0,
+              );
+            }
+          });
+        }, 150);
 
-        let statusBadge = `
-          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-            ${timeStr} (${dateStr})
-          </span>
-        `;
-        if (isLive) {
-          statusBadge = `
-            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
-              TRỰC TIẾP ${item.fixture.status.elapsed ? `(${item.fixture.status.elapsed}')` : ""}
-            </span>
-          `;
-        }
+        // Đưa giải có trận MU lên đầu
+        const sortedGroups = Array.from(groups.values()).sort((gA, gB) => {
+          const aHasMU = gA.matches.some(isMUMatch) ? 1 : 0;
+          const bHasMU = gB.matches.some(isMUMatch) ? 1 : 0;
+          return bHasMU - aHasMU;
+        });
 
-        const cardWrapperClass = isBarca
-          ? "bg-gradient-to-b from-amber-50/50 via-white to-white rounded-2xl border-2 border-amber-400 shadow-md ring-3 ring-amber-400/20 p-3.5 sm:p-5 relative overflow-hidden transition-all"
-          : "bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all p-3.5 sm:p-5";
+        return sortedGroups
+          .map((group) => {
+            const leagueName = getLeagueVietnameseName(group.league);
+            // Đưa trận có MU lên đầu trong từng giải
+            const matches = [...group.matches].sort(
+              (a, b) => (isMUMatch(b) ? 1 : 0) - (isMUMatch(a) ? 1 : 0),
+            );
+            return `
+              <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs mb-3.5 overflow-hidden">
+                <!-- Header Giải đấu phần Kết quả: BỎ Cược..., Tài / Xỉu, 1X2 -->
+                <div class="flex items-center justify-between px-3.5 sm:px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
+                  <div class="text-slate-800 font-bold text-sm sm:text-base">
+                    ${leagueName}
+                  </div>
+                  <span class="text-xs text-slate-400 font-medium">Kết quả trận đấu</span>
+                </div>
 
-        const barcaHeaderBanner = isBarca
-          ? `
-            <div class="-mx-3.5 -mt-3.5 sm:-mx-5 sm:-mt-5 mb-3 px-3.5 py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 font-bold text-xs sm:text-sm rounded-t-2xl flex items-center justify-between shadow-xs border-b border-amber-300/80">
-              <div class="flex items-center gap-2">
-                <span class="text-base sm:text-lg">👑</span>
-                <span class="font-extrabold uppercase tracking-wide">Mời anh Dú tham khảo</span>
-                <span class="hidden sm:inline-block px-2 py-0.5 rounded-full bg-slate-900/15 text-slate-900 text-xs font-bold">Trận cầu tâm điểm</span>
-              </div>
-              <div class="flex items-center gap-1.5 text-xs font-extrabold bg-white/40 px-2 py-0.5 rounded-lg border border-white/50">
-                <span>🔴🔵 FC Barcelona</span>
-              </div>
-            </div>
-          `
-          : "";
-
-        return `
-          <div class="${cardWrapperClass}">
-            ${barcaHeaderBanner}
-
-            <!-- Header Giải đấu & Giờ thi đấu -->
-            <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                ${
-                  item.league.logo
-                    ? `<img src="${item.league.logo}" alt="${item.league.name}" class="w-5 h-5 object-contain" onerror="this.style.display='none'" />`
-                    : ""
-                }
-                <span class="text-xs sm:text-sm font-bold text-slate-800">
-                  ${item.league.name}
-                </span>
-                ${
-                  item.league.round
-                    ? `<span class="hidden sm:inline-block text-xs text-slate-400">• ${item.league.round}</span>`
-                    : ""
-                }
-              </div>
-              <div>${statusBadge}</div>
-            </div>
-
-            <!-- Đội hình thi đấu & VS trên 1 dòng ngang như desktop -->
-            <div class="flex items-center justify-between w-full py-1.5 gap-2">
-              <!-- Đội nhà -->
-              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-end min-w-0">
-                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-right" title="${item.teams.home.name}">
-                  ${homeName}
-                </span>
-                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
-                  <img
-                    src="${item.teams.home.logo}"
-                    alt="${homeName}"
-                    class="w-full h-full object-contain"
-                    onerror="this.src='https://via.placeholder.com/32?text=FC'"
-                  />
+                <!-- Danh sách các trận trong giải -->
+                <div class="px-3.5 sm:px-4">
+                  ${matches.map((item) => renderFinishedMatchRow(item)).join("")}
                 </div>
               </div>
+            `;
+          })
+          .join("");
+      }
 
-              <!-- VS hoặc Tỷ số live (Chính giữa) -->
-              <div class="shrink-0 text-center flex items-center justify-center">
-                ${
-                  isLive
-                    ? `
-                  <div class="bg-rose-600 text-white font-mono font-bold text-xs sm:text-sm px-2 sm:px-2.5 py-1 rounded-xl shadow-xs whitespace-nowrap">
-                    ${item.goals?.home ?? 0} - ${item.goals?.away ?? 0}
-                  </div>
-                `
-                    : `
-                  <div class="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 font-bold text-xs whitespace-nowrap">
-                    VS
-                  </div>
-                `
-                }
-              </div>
+      function renderMatchesListGroupedByLeague(matchesList) {
+        if (!matchesList || matchesList.length === 0) return "";
 
-              <!-- Đội khách -->
-              <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 justify-start min-w-0">
-                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 border border-slate-200/80 p-1 flex items-center justify-center shrink-0">
-                  <img
-                    src="${item.teams.away.logo}"
-                    alt="${awayName}"
-                    class="w-full h-full object-contain"
-                    onerror="this.src='https://via.placeholder.com/32?text=FC'"
-                  />
+        const groups = new Map();
+        matchesList.forEach((m) => {
+          const lid = m.league?.id || 0;
+          if (!groups.has(lid)) {
+            groups.set(lid, {
+              league: m.league,
+              matches: [],
+            });
+          }
+          groups.get(lid).matches.push(m);
+        });
+
+        // Đưa giải có trận MU lên đầu
+        const sortedGroups = Array.from(groups.values()).sort((gA, gB) => {
+          const aHasMU = gA.matches.some(isMUMatch) ? 1 : 0;
+          const bHasMU = gB.matches.some(isMUMatch) ? 1 : 0;
+          return bHasMU - aHasMU;
+        });
+
+        return sortedGroups
+          .map((group) => {
+            const leagueName = getLeagueVietnameseName(group.league);
+            // Đưa trận có MU lên đầu trong từng giải
+            const matches = [...group.matches].sort(
+              (a, b) => (isMUMatch(b) ? 1 : 0) - (isMUMatch(a) ? 1 : 0),
+            );
+            return `
+              <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs mb-3.5 overflow-hidden">
+                <!-- Header Giải đấu chuẩn như 1.jpg cho trận sắp đá -->
+                <div class="flex items-center justify-between px-3.5 sm:px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
+                  <div class="text-slate-700 font-semibold text-sm sm:text-base">
+                    ${leagueName}
+                  </div>
+                  <div class="grid grid-cols-3 gap-1.5 sm:gap-2 text-center text-xs sm:text-sm text-slate-400 font-normal w-[216px] sm:w-[250px] shrink-0">
+                    <span class="truncate">Cược...</span>
+                    <span class="truncate">Tài / Xỉu</span>
+                    <span class="truncate">1X2</span>
+                  </div>
                 </div>
-                <span class="text-xs sm:text-base font-bold text-slate-900 truncate text-left" title="${item.teams.away.name}">
-                  ${awayName}
-                </span>
-              </div>
-            </div>
 
-            <!-- Bảng Kèo Châu Á & Tài Xỉu -->
-            ${renderOddsBlock(item.oddsParsed, index)}
-          </div>
-        `;
+                <!-- Danh sách các trận trong giải -->
+                <div class="px-3.5 sm:px-4">
+                  ${matches.map((item) => renderMatchRow(item)).join("")}
+                </div>
+              </div>
+            `;
+          })
+          .join("");
       }
 
       function renderCurrentView() {
@@ -3837,7 +3949,7 @@
 
         const isMorning = isMorningResultHours();
 
-        // Helper hàm tìm kiếm thông minh theo cả tên đầy đủ, tên viết tắt và alias
+        // Helper hàm tìm kiếm thông minh
         const matchSearch = (m, q) => {
           if (!q) return true;
           const h = (m.teams?.home?.name || "").toLowerCase();
@@ -3855,17 +3967,15 @@
             hShort.includes(q) ||
             aShort.includes(q) ||
             l.includes(q) ||
-            (q === "mu" &&
-              (h.includes("manchester united") ||
-                a.includes("manchester united")))
+            (q === "mu" && isMUMatch(m))
           );
         };
 
-        // Trường hợp Tab "Hôm qua": Chỉ hiển thị kết quả
+        // Trường hợp Tab "Hôm qua": Chỉ hiển thị kết quả (BỎ Cược..., Tài/Xỉu, 1X2)
         if (currentTab === "yesterday") {
           let list = [...(matchesCache.yesterday || [])];
           if (currentLeagueFilter !== "all") {
-            list = list.filter((m) => m.league.id === currentLeagueFilter);
+            list = list.filter((m) => m.league?.id === currentLeagueFilter);
           }
           if (searchQuery) {
             list = list.filter((m) => matchSearch(m, searchQuery));
@@ -3880,23 +3990,15 @@
           }
 
           emptyState.classList.add("hidden");
-          list.sort(
-            (a, b) =>
-              (isBarcelonaMatch(b) ? 1 : 0) - (isBarcelonaMatch(a) ? 1 : 0),
-          );
-          matchesContainer.innerHTML = list
-            .map((item) =>
-              renderFinishedMatchCard(item, isBarcelonaMatch(item)),
-            )
-            .join("");
+          matchesContainer.innerHTML = renderResultsListGroupedByLeague(list);
           return;
         }
 
-        // Trường hợp Tab "Ngày mai": Chỉ hiển thị kèo sớm
+        // Trường hợp Tab "Ngày mai": Chỉ hiển thị kèo sớm (Giữ Cược..., Tài/Xỉu, 1X2)
         if (currentTab === "tomorrow") {
           let list = [...(matchesCache.tomorrow || [])];
           if (currentLeagueFilter !== "all") {
-            list = list.filter((m) => m.league.id === currentLeagueFilter);
+            list = list.filter((m) => m.league?.id === currentLeagueFilter);
           }
           if (searchQuery) {
             list = list.filter((m) => matchSearch(m, searchQuery));
@@ -3911,15 +4013,7 @@
           }
 
           emptyState.classList.add("hidden");
-          list.sort(
-            (a, b) =>
-              (isBarcelonaMatch(b) ? 1 : 0) - (isBarcelonaMatch(a) ? 1 : 0),
-          );
-          matchesContainer.innerHTML = list
-            .map((item, idx) =>
-              renderUpcomingMatchCard(item, idx, isBarcelonaMatch(item)),
-            )
-            .join("");
+          matchesContainer.innerHTML = renderMatchesListGroupedByLeague(list);
           return;
         }
 
@@ -3931,7 +4025,7 @@
         // Lọc theo giải đấu và tìm kiếm
         if (currentLeagueFilter !== "all") {
           todayList = todayList.filter(
-            (m) => m.league.id === currentLeagueFilter,
+            (m) => m.league?.id === currentLeagueFilter,
           );
         }
         if (searchQuery) {
@@ -3956,7 +4050,7 @@
           let yestFiltered = matchesCache.yesterday;
           if (currentLeagueFilter !== "all") {
             yestFiltered = yestFiltered.filter(
-              (m) => m.league.id === currentLeagueFilter,
+              (m) => m.league?.id === currentLeagueFilter,
             );
           }
           finishedRecent = yestFiltered.filter(
@@ -3965,16 +4059,6 @@
               m.goals?.home !== null,
           );
         }
-
-        // Đảm bảo trận của Barcelona luôn được ghim lên đầu tiên trong từng nhóm
-        finishedRecent.sort(
-          (a, b) =>
-            (isBarcelonaMatch(b) ? 1 : 0) - (isBarcelonaMatch(a) ? 1 : 0),
-        );
-        upcomingToday.sort(
-          (a, b) =>
-            (isBarcelonaMatch(b) ? 1 : 0) - (isBarcelonaMatch(a) ? 1 : 0),
-        );
 
         if (finishedRecent.length === 0 && upcomingToday.length === 0) {
           matchesContainer.innerHTML = "";
@@ -3986,74 +4070,58 @@
 
         emptyState.classList.add("hidden");
 
-        // Tạo HTML cho Khối Kết Quả
+        // Tạo HTML cho Khối Kết Quả (BỎ Cược..., Tài/Xỉu, 1X2 - CHỈ KẾT QUẢ & NGƯỜI GHI BÀN / THẺ ĐỎ)
         let resultsSectionHtml = "";
         if (finishedRecent.length > 0) {
           resultsSectionHtml = `
-            <section class="space-y-3">
-              <div class="flex items-center justify-between pb-1">
+            <section class="space-y-2">
+              <div class="flex items-center justify-between pb-1 px-1">
                 <div class="flex items-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                   <h2 class="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wide">
-                    Kết Quả Đêm Qua & Rạng Sáng
+                    Kết Quả Đêm Qua
                   </h2>
                   <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
                     ${finishedRecent.length} trận
                   </span>
                 </div>
-                ${
-                  isMorning
-                    ? ``
-                    : `<span class="text-xs text-slate-400">Đã kết thúc</span>`
-                }
               </div>
 
-              <div class="space-y-3">
-                ${finishedRecent.map((item) => renderFinishedMatchCard(item, isBarcelonaMatch(item))).join("")}
-              </div>
+              ${renderResultsListGroupedByLeague(finishedRecent)}
             </section>
           `;
         }
 
-        // Tạo HTML cho Khối Kèo Các Trận Tiếp Theo
+        // Tạo HTML cho Khối Kèo Các Trận Tiếp Theo (GIỮ NGUYÊN 3 CỘT KÈO 1.JPG)
         let upcomingSectionHtml = "";
         if (upcomingToday.length > 0) {
           upcomingSectionHtml = `
-            <section class="space-y-3">
-              <div class="flex items-center justify-between pb-1">
+            <section class="space-y-2">
+              <div class="flex items-center justify-between pb-1 px-1">
                 <div class="flex items-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   <h2 class="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wide">
-                    Trận Sắp Đá & Kèo Châu Á / Tài Xỉu
+                    Trận Sắp Đá 
                   </h2>
                   <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                     ${upcomingToday.length} trận
                   </span>
                 </div>
-                <span class="text-xs text-emerald-700 font-semibold">Tỷ lệ trực tiếp</span>
               </div>
 
-              <div class="space-y-3.5">
-                ${upcomingToday.map((item, idx) => renderUpcomingMatchCard(item, idx, isBarcelonaMatch(item))).join("")}
-              </div>
+              ${renderMatchesListGroupedByLeague(upcomingToday)}
             </section>
           `;
         }
 
-        // ==============================================================
-        // SẮP XẾP VỊ TRÍ THEO ĐÚNG YÊU CẦU:
-        // - 5h - 10h sáng: Kết quả đặt Ở TRÊN CÙNG, kèo ở dưới.
-        // - Sau 10h sáng: Kèo đặt Ở TRÊN CÙNG, kết quả cho XUỐNG DƯỚI CÙNG.
-        // ==============================================================
+        // Sắp xếp theo khung giờ 5h - 10h sáng
         if (isMorning) {
-          // KHUNG GIỜ 5H - 10H SÁNG: KẾT QUẢ Ở TRÊN CÙNG
           matchesContainer.innerHTML = `
             ${resultsSectionHtml}
             ${resultsSectionHtml && upcomingSectionHtml ? `<div class="border-t border-slate-200/80 my-4"></div>` : ""}
             ${upcomingSectionHtml}
           `;
         } else {
-          // NGOÀI KHUNG GIỜ 5H - 10H SÁNG: KÈO Ở TRÊN CÙNG, KẾT QUẢ CHO XUỐNG DƯỚI CÙNG
           matchesContainer.innerHTML = `
             ${upcomingSectionHtml}
             ${upcomingSectionHtml && resultsSectionHtml ? `<div class="border-t border-slate-200/80 my-4"></div>` : ""}
@@ -4066,9 +4134,13 @@
       // MODAL MỐC KÈO CHẤP
       // ==============================================================
 
-      function openHandicapModal(matchIndex) {
-        const list = matchesCache[currentTab] || [];
-        const match = list[matchIndex];
+      function openHandicapModal(fixtureId) {
+        let match = null;
+        ["today", "yesterday", "tomorrow"].forEach((k) => {
+          if (!match && matchesCache[k]) {
+            match = matchesCache[k].find((m) => m.fixture?.id === fixtureId);
+          }
+        });
         if (!match || !match.oddsParsed?.asianHandicap?.allLines) return;
 
         const ah = match.oddsParsed.asianHandicap;
@@ -4129,8 +4201,10 @@
           if (e.target.id === "handicap-modal") closeHandicapModal();
         });
 
-      // Xóa toàn bộ cache BXH cũ để cập nhật ngay bảng chuẩn xác mùa 2026/2027 (Man City 21 điểm)
+      // Xóa cache cũ để đồng bộ sạch sẽ danh sách giải đấu chuẩn
       try {
+        localStorage.removeItem("wh_fixtures_cache");
+        localStorage.removeItem("wh_cache_date");
         Object.keys(localStorage).forEach((k) => {
           if (
             k &&
