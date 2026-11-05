@@ -3376,15 +3376,15 @@
       ) {
         const detailsEl = document.getElementById(`events-details-${fixId}`);
         const btnEl = document.getElementById(`events-toggle-btn-${fixId}`);
-        if (!detailsEl || !btnEl) return;
+        if (!detailsEl) return;
 
         const isHidden = detailsEl.classList.contains("hidden");
 
         if (isHidden) {
           detailsEl.classList.remove("hidden");
-          btnEl.innerHTML = `<span>Thu gọn chi tiết</span> <span class="text-[10px]">▲</span>`;
-          btnEl.className =
-            "px-2.5 py-1 text-xs text-slate-800 bg-slate-200/80 hover:bg-slate-300 border border-slate-300 rounded-lg transition-all flex items-center gap-1 font-semibold shadow-2xs";
+          if (btnEl) {
+            btnEl.innerHTML = `<span>Thu gọn bàn thắng &amp; thẻ đỏ</span> <span id="events-toggle-icon-${fixId}">▲</span>`;
+          }
 
           if (!detailsEl.hasAttribute("data-loaded")) {
             await loadDetailsContent(
@@ -3397,9 +3397,9 @@
           }
         } else {
           detailsEl.classList.add("hidden");
-          btnEl.innerHTML = `<span>⚽ Xem bàn thắng &amp; thẻ đỏ</span> <span class="text-[10px]">▼</span>`;
-          btnEl.className =
-            "px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-lg transition-all flex items-center gap-1 font-medium shadow-2xs";
+          if (btnEl) {
+            btnEl.innerHTML = `<span>Xem bàn thắng &amp; thẻ đỏ</span> <span id="events-toggle-icon-${fixId}">▼</span>`;
+          }
         }
       }
 
@@ -3677,6 +3677,10 @@
         const fixId = item.fixture?.id;
         const homeName = getShortClubName(item.teams.home?.name || "");
         const awayName = getShortClubName(item.teams.away?.name || "");
+        const homeLogo = item.teams.home?.logo || "";
+        const awayLogo = item.teams.away?.logo || "";
+        const homeId = item.teams.home?.id;
+        const awayId = item.teams.away?.id;
 
         const isMU = isMUMatch(item);
         const homeIsMU =
@@ -3703,8 +3707,24 @@
 
         const homeScore = item.goals?.home ?? 0;
         const awayScore = item.goals?.away ?? 0;
-        const homeWin = homeScore > awayScore;
-        const awayWin = awayScore > homeScore;
+
+        let events = item.events;
+        if (!events && fixId) {
+          try {
+            const cached = localStorage.getItem(`wh_events_${fixId}`);
+            if (cached) events = JSON.parse(cached);
+          } catch (e) {}
+        }
+        const isPreloaded = !!events && Array.isArray(events);
+        const preloadedHtml = isPreloaded
+          ? renderMatchEventsContent(
+              events,
+              homeId,
+              awayId,
+              homeScore,
+              awayScore,
+            )
+          : "";
 
         // Xác định kết quả của Manchester United
         let muStatus = null; // 'win' | 'lose' | 'draw'
@@ -3725,7 +3745,7 @@
         if (isMU && muStatus) {
           if (muStatus === "win") {
             muBannerHtml = `
-              <div class="mt-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-white shadow-md shadow-red-500/20 border border-amber-300/70 flex items-start gap-2.5">
+              <div class="mt-2.5 p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-white shadow-md shadow-red-500/20 border border-amber-300/70 flex items-start gap-2.5">
                 <span class="text-2xl sm:text-3xl shrink-0 animate-bounce">🎉</span>
                 <div class="min-w-0 flex-1">
                   <div class="font-black uppercase tracking-wider flex items-center gap-1.5 text-amber-200 text-xs sm:text-sm">
@@ -3740,7 +3760,7 @@
             `;
           } else if (muStatus === "lose") {
             muBannerHtml = `
-              <div class="mt-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-slate-950 via-neutral-900 to-red-950 text-white shadow-lg shadow-black/40 border-2 border-red-500/80 flex items-start gap-2.5">
+              <div class="mt-2.5 p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-slate-950 via-neutral-900 to-red-950 text-white shadow-lg shadow-black/40 border-2 border-red-500/80 flex items-start gap-2.5">
                 <span class="text-2xl sm:text-3xl shrink-0 animate-pulse">🦇</span>
                 <div class="min-w-0 flex-1">
                   <div class="font-black uppercase tracking-wider flex items-center gap-1.5 text-red-400 text-xs sm:text-sm">
@@ -3755,7 +3775,7 @@
             `;
           } else if (muStatus === "draw") {
             muBannerHtml = `
-              <div class="mt-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-100 text-amber-950 shadow-xs border border-amber-300 flex items-start gap-2.5">
+              <div class="mt-2.5 p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-100 text-amber-950 shadow-xs border border-amber-300 flex items-start gap-2.5">
                 <span class="text-2xl sm:text-3xl shrink-0">🧣</span>
                 <div class="min-w-0 flex-1">
                   <div class="font-black uppercase tracking-wider flex items-center gap-1.5 text-amber-800 text-xs sm:text-sm">
@@ -3772,46 +3792,67 @@
         }
 
         return `
-          <div class="py-3 sm:py-3.5 border-b border-slate-100 last:border-b-0 ${isMU ? "bg-gradient-to-b from-red-50/80 via-white to-red-50/40 rounded-2xl p-3 sm:p-4 my-2.5 border-2 border-red-500 shadow-md shadow-red-500/15 ring-4 ring-red-500/15 transition-all" : ""}">
+          <div class="py-2.5 sm:py-3 border-b border-slate-100 last:border-b-0 ${isMU ? "bg-gradient-to-b from-red-50/80 via-white to-red-50/40 rounded-2xl p-3 sm:p-4 my-2.5 border-2 border-red-500 shadow-md shadow-red-500/15 ring-4 ring-red-500/15 transition-all" : ""}">
             <!-- Header trận: Giờ thi đấu & Badge Hết giờ FT -->
-            <div class="flex items-center justify-between text-xs mb-2">
+            <div class="flex items-center justify-between text-xs mb-1.5">
               <div class="flex items-center gap-2">
-                <span class="text-slate-500 font-medium">${timeDisplay}</span>
-                ${isMU ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white flex items-center gap-1.5 shadow-sm shadow-red-500/30 tracking-wide uppercase"><span class="w-2 h-2 rounded-full bg-white animate-ping"></span>🔴 MANCHESTER UNITED</span>` : ""}
+                <span class="text-slate-400 font-medium text-[11px] sm:text-xs">${timeDisplay}</span>
+                ${isMU ? `<span class="px-2 py-0.2 rounded-full text-[10px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white flex items-center gap-1 shadow-xs tracking-wide uppercase"><span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>🔴 MANCHESTER UNITED</span>` : ""}
               </div>
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                HẾT GIỜ (FT)
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200/80">
+                FT
               </span>
             </div>
 
-            <!-- Tên 2 đội & Tỷ số kết quả to rõ (Không có cột cược) -->
-            <div class="space-y-2 py-0.5">
-              <!-- Đội nhà -->
-              <div class="flex items-center justify-between gap-3">
-                <span class="text-sm sm:text-base ${homeIsMU ? "font-black text-red-700 underline decoration-red-500 decoration-2 underline-offset-4 tracking-wide" : homeWin ? "font-bold text-slate-900" : "font-medium text-slate-700"} truncate" title="${item.teams.home.name}">
+            <!-- Giao diện kết quả chuẩn hình ketqua.png: [Đội nhà đỏ] [Logo] [Pill xanh 3-2] [Logo] [Đội khách đỏ] -->
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-3 py-1">
+              <!-- Cột trái: Tên Đội Nhà (màu đỏ) + Logo Đội Nhà -->
+              <div class="flex items-center justify-end gap-1.5 sm:gap-2.5 text-right min-w-0">
+                <span class="text-sm sm:text-base font-bold text-red-600 truncate leading-snug ${homeIsMU ? "font-black text-red-700 underline decoration-red-500" : ""}" title="${item.teams.home.name}">
                   ${homeIsMU ? "🔴 " : ""}${homeName}
                 </span>
-                <span class="font-mono font-bold text-base sm:text-lg ${homeWin ? "text-emerald-700 font-extrabold" : "text-slate-900"} shrink-0">
-                  ${homeScore}
-                </span>
+                ${homeLogo ? `<img src="${homeLogo}" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-contain shrink-0 bg-white p-0.5 shadow-2xs border border-slate-100" alt="${homeName}" onerror="this.style.display='none'">` : ""}
               </div>
 
-              <!-- Đội khách -->
-              <div class="flex items-center justify-between gap-3">
-                <span class="text-sm sm:text-base ${awayIsMU ? "font-black text-red-700 underline decoration-red-500 decoration-2 underline-offset-4 tracking-wide" : awayWin ? "font-bold text-slate-900" : "font-medium text-slate-700"} truncate" title="${item.teams.away.name}">
+              <!-- Cột giữa: Viên thuốc xanh lá cây tỷ số chuẩn ketqua.png (Click để xem người ghi bàn & thẻ đỏ) -->
+              <div class="flex items-center justify-center shrink-0">
+                <button
+                  onclick="toggleMatchEvents(${fixId}, ${homeId}, ${awayId}, ${homeScore}, ${awayScore})"
+                  class="bg-[#28a745] hover:bg-[#218838] active:scale-95 text-white font-black text-sm sm:text-base px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-xs tracking-wider flex items-center justify-center cursor-pointer transition select-none"
+                  title="Bấm để xem người ghi bàn &amp; thẻ đỏ"
+                >
+                  ${homeScore} - ${awayScore}
+                </button>
+              </div>
+
+              <!-- Cột phải: Logo Đội Khách + Tên Đội Khách (màu đỏ) -->
+              <div class="flex items-center justify-start gap-1.5 sm:gap-2.5 text-left min-w-0">
+                ${awayLogo ? `<img src="${awayLogo}" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-contain shrink-0 bg-white p-0.5 shadow-2xs border border-slate-100" alt="${awayName}" onerror="this.style.display='none'">` : ""}
+                <span class="text-sm sm:text-base font-bold text-red-600 truncate leading-snug ${awayIsMU ? "font-black text-red-700 underline decoration-red-500" : ""}" title="${item.teams.away.name}">
                   ${awayIsMU ? "🔴 " : ""}${awayName}
                 </span>
-                <span class="font-mono font-bold text-base sm:text-lg ${awayWin ? "text-emerald-700 font-extrabold" : "text-slate-900"} shrink-0">
-                  ${awayScore}
-                </span>
               </div>
+            </div>
+
+            <!-- Nút bấm thu gọn / mở rộng chi tiết người ghi bàn & thẻ đỏ -->
+            <div class="flex items-center justify-center mt-0.5">
+              <button
+                id="events-toggle-btn-${fixId}"
+                onclick="toggleMatchEvents(${fixId}, ${homeId}, ${awayId}, ${homeScore}, ${awayScore})"
+                class="text-[11px] text-slate-400 hover:text-emerald-700 hover:underline flex items-center gap-1 font-medium transition cursor-pointer py-0.5"
+              >
+                <span>Xem bàn thắng &amp; thẻ đỏ</span>
+                <span id="events-toggle-icon-${fixId}">▼</span>
+              </button>
             </div>
 
             <!-- Banner hài hước đặc quyền cho MU (Thắng ra hang / Thua vào hang) -->
             ${muBannerHtml}
 
-            <!-- Danh sách người ghi bàn & thẻ đỏ trực tiếp bên dưới -->
-            ${renderMatchEventsSection(item, true)}
+            <!-- Danh sách người ghi bàn & thẻ đỏ (Mặc định THU LẠI, click mới hiện ra) -->
+            <div id="events-details-${fixId}" class="hidden" ${isPreloaded ? 'data-loaded="true"' : ""}>
+              ${preloadedHtml}
+            </div>
           </div>
         `;
       }
@@ -3830,25 +3871,6 @@
           }
           groups.get(lid).matches.push(m);
         });
-
-        // Tự động load chi tiết bàn thắng & thẻ đỏ cho các trận chưa có cache
-        setTimeout(() => {
-          resultsList.forEach((m) => {
-            const fixId = m.fixture?.id;
-            const detailsEl = document.getElementById(
-              `events-details-${fixId}`,
-            );
-            if (detailsEl && detailsEl.getAttribute("data-loaded") !== "true") {
-              loadDetailsContent(
-                fixId,
-                m.teams?.home?.id,
-                m.teams?.away?.id,
-                m.goals?.home ?? 0,
-                m.goals?.away ?? 0,
-              );
-            }
-          });
-        }, 150);
 
         // Đưa giải có trận MU lên đầu
         const sortedGroups = Array.from(groups.values()).sort((gA, gB) => {
